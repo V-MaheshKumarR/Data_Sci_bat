@@ -1,0 +1,107 @@
+{
+  "versions": {
+    "svm-v1": {
+      "version": "svm-v1",
+      "model_key": "svm",
+      "status": "production",
+      "created_at": "2026-02-26T07:16:42.218445+00:00",
+      "promoted_at": "2026-02-26T07:16:42.218459+00:00",
+      "archived_at": null,
+      "metrics": {
+        "accuracy": 0.7206,
+        "macro_f1": 0.7164
+      },
+      "training_info": {
+        "n_train": 270,
+        "n_test": 68,
+        "best_params": {
+          "C": 1.0,
+          "kernel": "rbf"
+        },
+        "best_cv_accuracy": 0.7206,
+        "train_time_seconds": 5
+      },
+      "dataset_info": {
+        "total_rows": 338,
+        "genre_counts": {
+          "Pop": 58,
+          "Hip-Hop": 57,
+          "Country": 56,
+          "Electronic": 56,
+          "Rock": 56,
+          "R&B": 55
+        }
+      },
+      "artifact_path": "svm-v1.joblib"
+    },
+    "knn-v1": {
+      "version": "knn-v1",
+      "model_key": "knn",
+      "status": "staging",
+      "created_at": "2026-02-26T07:16:42.221634+00:00",
+      "promoted_at": null,
+      "archived_at": null,
+      "metrics": {
+        "accuracy": 0.6471,
+        "macro_f1": 0.6335
+      },
+      "training_info": {
+        "n_train": 270,
+        "n_test": 68,
+        "best_params": {
+          "n_neighbors": 7,
+          "weights": "distance"
+        },
+        "best_cv_accuracy": 0.6471,
+        "train_time_seconds": 3
+      },
+      "dataset_info": {
+        "total_rows": 338,
+        "genre_counts": {
+          "Pop": 58,
+          "Hip-Hop": 57,
+          "Country": 56,
+          "Electronic": 56,
+          "Rock": 56,
+          "R&B": 55
+        }
+      },
+      "artifact_path": "knn-v1.joblib"
+    },
+    "random_forest-v1": {
+      "version": "random_forest-v1",
+      "model_key": "random_forest",
+      "status": "staging",
+      "created_at": "2026-02-26T07:16:42.296179+00:00",
+      "promoted_at": null,
+      "archived_at": null,
+      "metrics": {
+        "accuracy": 0.6618,
+        "macro_f1": 0.6541
+      },
+      "training_info": {
+        "n_train": 270,
+        "n_test": 68,
+        "best_params": {
+          "max_depth": null,
+          "n_estimators": 200
+        },
+        "best_cv_accuracy": 0.6618,
+        "train_time_seconds": 3
+      },
+      "dataset_info": {
+        "total_rows": 338,
+        "genre_counts": {
+          "Pop": 58,
+          "Hip-Hop": 57,
+          "Country": 56,
+          "Electronic": 56,
+          "Rock": 56,
+          "R&B": 55
+        }
+      },
+      "artifact_path": "random_forest-v1.joblib"
+    }
+  },
+  "production_version": "svm-v1"
+}

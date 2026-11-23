@@ -1,0 +1,22 @@
+# Local credentials and personal information
+.env
+.env.*
+!.env.example
+my_details.txt
+*.pem
+*.key
+
+# Local environments and generated caches
+.venv/
+venv/
+env/
+node_modules/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Keep nested repository metadata local while uploading their working files
+.git/
+
+# Excluded at the owner's request: exceeds GitHub's regular file-size limit
+/Recommendation_system/code/models/bookmind.pkl

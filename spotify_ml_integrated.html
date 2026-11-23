@@ -1,0 +1,2955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoundML — Spotify Audio Features Classifier</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080808;
+  --surface:  #0f0f0f;
+  --card:     #141414;
+  --card2:    #1a1a1a;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --text:     #e8e8e8;
+  --muted:    #555;
+  --dim:      #888;
+
+  --green:    #00ff88;
+  --blue:     #00d4ff;
+  --pink:     #ff006e;
+  --orange:   #ff7b00;
+  --yellow:   #ffe600;
+  --purple:   #b44dff;
+
+  --ggreen:   rgba(0,255,136,0.08);
+  --gblue:    rgba(0,212,255,0.08);
+  --gpink:    rgba(255,0,110,0.08);
+  --gorange:  rgba(255,123,0,0.08);
+  --gpurple:  rgba(180,77,255,0.08);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ─── SCANLINES TEXTURE ─── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 2px,
+    rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px
+  );
+  pointer-events:none;z-index:1000;
+  opacity:0.3;
+}
+
+/* ─── HEADER ─── */
+header{
+  position:relative;
+  padding:3rem 2rem 2rem;
+  overflow:hidden;
+  border-bottom:1px solid var(--border);
+}
+.header-glow{
+  position:absolute;
+  width:600px;height:300px;
+  background:radial-gradient(ellipse,rgba(0,255,136,0.12) 0%,transparent 70%);
+  top:-100px;left:-100px;
+  pointer-events:none;
+}
+.header-glow2{
+  position:absolute;
+  width:400px;height:200px;
+  background:radial-gradient(ellipse,rgba(0,212,255,0.08) 0%,transparent 70%);
+  top:0;right:0;
+  pointer-events:none;
+}
+.header-inner{
+  max-width:1300px;
+  margin:0 auto;
+  position:relative;z-index:1;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:2rem;
+  flex-wrap:wrap;
+}
+.logo-area{}
+.logo-badge{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  background:rgba(0,255,136,0.1);
+  border:1px solid rgba(0,255,136,0.25);
+  color:var(--green);
+  padding:0.25rem 0.8rem;
+  border-radius:3px;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;
+  margin-bottom:1rem;
+}
+.logo-pulse{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  animation:pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.6)}}
+
+h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(3rem,6vw,5.5rem);
+  letter-spacing:0.05em;
+  line-height:0.95;
+  color:#fff;
+}
+h1 span{color:var(--green);}
+.header-sub{
+  font-size:0.88rem;color:var(--dim);
+  font-weight:300;
+  margin-top:0.8rem;
+  max-width:480px;line-height:1.7;
+}
+
+.header-stats{
+  display:flex;gap:1.5rem;flex-wrap:wrap;
+  align-self:flex-end;
+  padding-bottom:0.5rem;
+}
+.hstat{
+  text-align:right;
+}
+.hstat-n{
+  font-family:'Bebas Neue',monospace;
+  font-size:2rem;
+  line-height:1;
+  color:var(--green);
+}
+.hstat-l{
+  font-family:'DM Mono',monospace;
+  font-size:0.58rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:0.1rem;
+}
+
+/* ─── WAVEFORM VISUALIZER ─── */
+.waveform{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  height:40px;
+  margin-top:1.5rem;
+}
+.wave-bar{
+  width:3px;
+  border-radius:1px;
+  background:var(--green);
+  opacity:0.6;
+  animation:wave-anim var(--dur,0.8s) ease-in-out infinite alternate;
+  animation-delay:var(--delay,0s);
+}
+@keyframes wave-anim{
+  from{height:var(--min-h,4px);opacity:0.3}
+  to{height:var(--max-h,28px);opacity:0.9}
+}
+
+/* ─── TABS ─── */
+.tabs-wrap{
+  max-width:1300px;margin:0 auto;
+  padding:1.5rem 2rem 0;
+  display:flex;gap:0.3rem;
+  overflow-x:auto;
+}
+.tab{
+  display:flex;align-items:center;gap:0.5rem;
+  padding:0.55rem 1.2rem;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-bottom:none;
+  border-radius:6px 6px 0 0;
+  cursor:pointer;
+  font-size:0.8rem;font-weight:500;
+  color:var(--muted);
+  transition:all 0.2s;
+  white-space:nowrap;
+  font-family:'DM Sans',sans-serif;
+}
+.tab:hover{color:var(--text);border-color:var(--border2);}
+.tab.active{
+  background:var(--card);
+  color:#fff;
+  border-color:var(--border2);
+  box-shadow:0 -2px 0 var(--green) inset;
+}
+
+/* ─── MAIN ─── */
+main{
+  max-width:1300px;margin:0 auto;
+  padding:0 2rem 4rem;
+}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+.pane-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:0 12px 12px 12px;
+  padding:2rem;
+}
+
+/* ─── TYPOGRAPHY ─── */
+.pane-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;
+  letter-spacing:0.05em;
+  color:#fff;
+  margin-bottom:0.3rem;
+}
+.pane-sub{
+  font-size:0.82rem;color:var(--dim);
+  font-weight:300;margin-bottom:1.8rem;
+  line-height:1.6;
+}
+.section-heading{
+  font-family:'DM Mono',monospace;
+  font-size:0.65rem;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:0.8rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.section-heading::before{content:'//';color:var(--green);}
+
+/* ─── GRIDS ─── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+
+/* ─── CARDS ─── */
+.card{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:1.2rem;
+  transition:border-color 0.2s,transform 0.2s;
+}
+.card:hover{border-color:var(--border2);}
+
+/* ─── GENRE BADGES ─── */
+.genre-pill{
+  display:inline-block;
+  padding:0.2rem 0.65rem;
+  border-radius:20px;
+  font-family:'DM Mono',monospace;
+  font-size:0.65rem;
+  font-weight:500;
+  letter-spacing:0.04em;
+  border:1px solid;
+  margin:0.15rem;
+}
+
+/* ─── FEATURE DESCRIPTION CARDS ─── */
+.feat-card{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0.9rem 1rem;
+}
+.feat-name{
+  font-family:'DM Mono',monospace;
+  font-size:0.75rem;
+  font-weight:500;
+  color:var(--green);
+  margin-bottom:0.2rem;
+  letter-spacing:0.04em;
+}
+.feat-desc{
+  font-size:0.78rem;color:var(--dim);line-height:1.6;
+}
+.feat-range{
+  display:flex;justify-content:space-between;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;color:var(--muted);
+  margin-top:0.5rem;
+}
+
+/* ─── DATA TABLE ─── */
+.data-table{
+  width:100%;border-collapse:collapse;
+  font-size:0.75rem;
+}
+.data-table th{
+  padding:0.55rem 0.9rem;
+  background:#0a0a0a;
+  color:var(--dim);
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;
+  text-align:left;
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+.data-table td{
+  padding:0.5rem 0.9rem;
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  white-space:nowrap;
+}
+.data-table tr:hover td{background:rgba(255,255,255,0.02);}
+.data-table tr:last-child td{border-bottom:none;}
+
+/* ─── MINI BAR ─── */
+.mini-bar-wrap{
+  display:flex;align-items:center;gap:0.5rem;
+}
+.mini-bar-track{
+  width:70px;height:4px;
+  background:rgba(255,255,255,0.06);
+  border-radius:2px;overflow:hidden;
+  flex-shrink:0;
+}
+.mini-bar-fill{
+  height:100%;border-radius:2px;
+}
+.mini-val{
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;color:var(--dim);
+  min-width:28px;text-align:right;
+}
+
+/* ─── BAR CHART ROW ─── */
+.bar-row{
+  display:flex;align-items:center;gap:0.8rem;
+  margin-bottom:0.6rem;
+}
+.bar-lbl{
+  min-width:110px;font-size:0.78rem;
+  color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.bar-track{
+  flex:1;height:10px;
+  background:rgba(255,255,255,0.05);
+  border-radius:5px;overflow:hidden;
+}
+.bar-fill{height:100%;border-radius:5px;transition:width 1s ease;}
+.bar-val{
+  min-width:35px;text-align:right;
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;color:var(--dim);
+}
+
+/* ─── RADAR CHART ─── */
+.radar-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:1;
+  max-width:320px;
+  margin:0 auto;
+}
+
+/* ─── SCATTER POINTS ─── */
+.scatter-wrap{
+  position:relative;
+  height:240px;
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+}
+.s-dot{
+  position:absolute;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  transition:all 0.2s;
+  cursor:default;
+}
+.s-dot:hover{z-index:10;transform:translate(-50%,-50%) scale(1.8);}
+
+/* ─── MODEL CARDS ─── */
+.model-card{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:1.2rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  position:relative;
+}
+.model-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.model-card.selected{
+  border-color:var(--green);
+  box-shadow:0 0 20px rgba(0,255,136,0.08);
+}
+.model-card.selected::after{
+  content:'SELECTED';
+  position:absolute;top:0.7rem;right:0.7rem;
+  background:var(--green);color:#000;
+  font-family:'DM Mono',monospace;
+  font-size:0.55rem;font-weight:500;
+  letter-spacing:0.1em;
+  padding:0.15rem 0.5rem;
+  border-radius:2px;
+}
+.model-icon{font-size:1.8rem;margin-bottom:0.5rem;}
+.model-name{font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;}
+.model-desc{font-size:0.75rem;color:var(--dim);line-height:1.6;margin-bottom:0.9rem;}
+.model-m{
+  display:flex;justify-content:space-between;
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;
+  padding:0.3rem 0;
+  border-top:1px solid var(--border);
+}
+.m-lbl{color:var(--muted);}
+.m-val{color:var(--green);}
+
+/* ─── TRAIN BUTTON ─── */
+.train-btn{
+  display:inline-flex;align-items:center;gap:0.6rem;
+  background:var(--green);color:#000;
+  border:none;border-radius:6px;
+  padding:0.75rem 2rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.82rem;font-weight:500;
+  letter-spacing:0.05em;
+  cursor:pointer;
+  transition:all 0.2s;
+  margin-top:1rem;
+}
+.train-btn:hover{background:#00ff99;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,255,136,0.3);}
+.train-btn:disabled{background:var(--muted);color:var(--bg);cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ─── PROGRESS ─── */
+.prog-track{
+  height:4px;background:rgba(255,255,255,0.06);
+  border-radius:2px;overflow:hidden;margin-top:0.6rem;
+}
+.prog-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--green),var(--blue));
+  border-radius:2px;width:0;
+  transition:width 0.15s;
+  box-shadow:0 0 8px var(--green);
+}
+
+/* ─── TERMINAL LOG ─── */
+.terminal{
+  background:#000;
+  border:1px solid rgba(0,255,136,0.15);
+  border-radius:8px;
+  padding:1rem 1.2rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;
+  color:#555;
+  max-height:180px;
+  overflow-y:auto;
+  line-height:2;
+  margin-top:0.8rem;
+}
+.terminal::-webkit-scrollbar{width:4px;}
+.terminal::-webkit-scrollbar-track{background:transparent;}
+.terminal::-webkit-scrollbar-thumb{background:var(--border);}
+.t-ok{color:var(--green);}
+.t-info{color:var(--blue);}
+.t-warn{color:var(--yellow);}
+.t-em{color:#fff;}
+.t-dim{color:#333;}
+
+/* ─── METRICS PILLS ─── */
+.metric-pill{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;padding:0.9rem;text-align:center;
+}
+.mpill-n{
+  font-family:'Bebas Neue',monospace;
+  font-size:2.2rem;
+  line-height:1;
+}
+.mpill-l{
+  font-family:'DM Mono',monospace;
+  font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-top:0.3rem;
+}
+
+/* ─── CONFUSION MATRIX ─── */
+.cm-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:2px;font-size:0.7rem;
+  max-width:320px;
+}
+.cm-cell{
+  padding:0.4rem;text-align:center;
+  border-radius:3px;
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;
+}
+.cm-header{color:var(--muted);font-size:0.55rem;letter-spacing:0.06em;padding:0.3rem;}
+.cm-high{background:rgba(0,255,136,0.2);color:var(--green);font-weight:500;}
+.cm-mid{background:rgba(0,212,255,0.1);color:var(--blue);}
+.cm-low{background:rgba(255,255,255,0.03);color:var(--muted);}
+
+/* ─── PREDICT TAB ─── */
+.predict-layout{
+  display:grid;
+  grid-template-columns:1fr 420px;
+  gap:2rem;
+  align-items:start;
+}
+
+/* ─── SLIDERS ─── */
+.slider-group{margin-bottom:1.2rem;}
+.slider-header{
+  display:flex;justify-content:space-between;
+  align-items:center;
+  margin-bottom:0.4rem;
+}
+.slider-name{
+  font-family:'DM Mono',monospace;
+  font-size:0.72rem;letter-spacing:0.06em;color:var(--dim);
+}
+.slider-value{
+  font-family:'DM Mono',monospace;
+  font-size:0.72rem;color:var(--green);
+  font-weight:500;min-width:40px;text-align:right;
+}
+input[type=range]{
+  width:100%;
+  height:4px;
+  -webkit-appearance:none;
+  appearance:none;
+  background:rgba(255,255,255,0.08);
+  border-radius:2px;
+  outline:none;
+  cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:14px;height:14px;
+  border-radius:50%;
+  background:var(--green);
+  cursor:pointer;
+  box-shadow:0 0 6px var(--green);
+  transition:transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3);}
+input[type=range]::-webkit-slider-runnable-track{
+  height:4px;background:rgba(255,255,255,0.08);border-radius:2px;
+}
+
+/* slider fill via gradient trick */
+input[type=range].styled{
+  background:linear-gradient(
+    to right,
+    var(--green) 0%,
+    var(--green) var(--fill,50%),
+    rgba(255,255,255,0.08) var(--fill,50%),
+    rgba(255,255,255,0.08) 100%
+  );
+}
+
+/* ─── TEMPO SELECT ─── */
+.tempo-chips{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1.2rem;}
+.tempo-chip{
+  padding:0.3rem 0.8rem;
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:4px;cursor:pointer;
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;color:var(--dim);
+  transition:all 0.15s;
+}
+.tempo-chip:hover{border-color:var(--border2);color:var(--text);}
+.tempo-chip.on{background:rgba(0,255,136,0.1);border-color:var(--green);color:var(--green);}
+
+.key-chips{display:flex;gap:0.3rem;flex-wrap:wrap;}
+.key-chip{
+  padding:0.25rem 0.6rem;
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:3px;cursor:pointer;
+  font-family:'DM Mono',monospace;
+  font-size:0.65rem;color:var(--muted);
+  transition:all 0.15s;
+}
+.key-chip:hover{border-color:var(--border2);color:var(--text);}
+.key-chip.on{background:rgba(0,212,255,0.1);border-color:var(--blue);color:var(--blue);}
+
+/* ─── RESULT PANEL ─── */
+.result-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:1.5rem;
+  position:sticky;
+  top:1rem;
+  overflow:hidden;
+}
+.result-panel::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;
+  height:2px;
+  background:linear-gradient(90deg,var(--green),var(--blue));
+}
+
+/* ─── GENRE PREDICTION BARS ─── */
+.genre-pred-row{
+  display:flex;align-items:center;gap:0.7rem;
+  margin-bottom:0.55rem;
+}
+.gpred-name{
+  min-width:95px;
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.gpred-track{
+  flex:1;height:16px;
+  background:rgba(255,255,255,0.04);
+  border-radius:3px;overflow:hidden;
+  position:relative;
+}
+.gpred-fill{
+  height:100%;border-radius:3px;
+  transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+  display:flex;align-items:center;justify-content:flex-end;
+  padding-right:5px;
+}
+.gpred-fill span{
+  font-family:'DM Mono',monospace;
+  font-size:0.58rem;font-weight:500;
+  color:rgba(0,0,0,0.8);
+}
+.gpred-pct{
+  min-width:38px;text-align:right;
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;font-weight:500;
+}
+
+/* ─── MOOD CARD ─── */
+.mood-display{
+  text-align:center;
+  padding:1.5rem 1rem;
+  border-radius:10px;
+  margin-bottom:1.2rem;
+  transition:all 0.4s;
+  position:relative;
+  overflow:hidden;
+}
+.mood-emoji{font-size:3rem;display:block;margin-bottom:0.4rem;}
+.mood-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:0.08em;
+}
+.mood-sub{font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.2rem;}
+
+/* ─── AUDIO DNA RADAR (SVG) ─── */
+.radar-svg-wrap{
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:1rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ─── SHAP CONTRIBUTIONS ─── */
+.shap-row{
+  display:flex;align-items:center;gap:0.6rem;
+  margin-bottom:0.45rem;
+  font-size:0.75rem;
+}
+.shap-name{min-width:95px;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.68rem;}
+.shap-track{flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;position:relative;}
+.shap-bar{height:100%;border-radius:4px;}
+.shap-val{min-width:38px;text-align:right;font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:500;}
+
+/* ─── SIMILAR SONGS ─── */
+.song-row{
+  display:flex;align-items:center;gap:0.8rem;
+  padding:0.55rem 0.7rem;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);
+  border-radius:6px;
+  margin-bottom:0.45rem;
+  font-size:0.75rem;
+}
+.song-art{
+  width:30px;height:30px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;flex-shrink:0;
+}
+.song-title{font-weight:500;font-size:0.78rem;}
+.song-artist{font-size:0.68rem;color:var(--muted);}
+.song-genre{
+  margin-left:auto;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;
+  padding:0.15rem 0.5rem;
+  border-radius:3px;
+  flex-shrink:0;
+}
+
+/* ─── LIVE WAVEFORM IN RESULT ─── */
+.mini-wave{
+  display:flex;align-items:center;gap:1px;
+  height:20px;justify-content:center;
+  margin:0.5rem 0;
+}
+.mw-bar{
+  width:2px;border-radius:1px;
+  background:var(--green);
+  opacity:0.6;
+}
+
+/* ─── LEARN PIPELINE ─── */
+.pipeline-step{
+  display:flex;gap:1.2rem;
+  padding:1.2rem;
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;
+  margin-bottom:0.7rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  align-items:flex-start;
+}
+.pipeline-step:hover{border-color:var(--border2);}
+.pipeline-step.open{border-color:rgba(0,255,136,0.3);}
+.step-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;
+  color:var(--green);
+  line-height:1;
+  opacity:0.4;
+  flex-shrink:0;
+  min-width:36px;
+}
+.step-title{font-size:0.92rem;font-weight:600;margin-bottom:0.2rem;color:#fff;}
+.step-prev{font-size:0.78rem;color:var(--muted);}
+.step-body{
+  display:none;margin-top:0.9rem;
+  font-size:0.8rem;color:var(--dim);line-height:1.8;
+}
+.step-body.open{display:block;}
+.code-block{
+  background:#000;
+  border:1px solid rgba(0,255,136,0.12);
+  border-radius:6px;
+  padding:0.9rem 1rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;line-height:1.9;
+  color:#aaa;
+  margin-top:0.7rem;
+  overflow-x:auto;
+}
+.kw{color:#ff7b9c;}
+.fn{color:var(--green);}
+.cm{color:#333;}
+.st{color:#ffb347;}
+.nb{color:var(--blue);}
+
+/* ─── DIVIDER ─── */
+.div{height:1px;background:var(--border);margin:1.5rem 0;}
+
+/* ─── INSIGHT BOX ─── */
+.insight{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;padding:0.9rem 1rem;
+  display:flex;gap:0.7rem;align-items:flex-start;
+  margin-bottom:0.6rem;
+}
+.insight h4{font-size:0.82rem;font-weight:600;margin-bottom:0.2rem;}
+.insight p{font-size:0.76rem;color:var(--dim);line-height:1.6;}
+
+/* ─── TOOLTIP ─── */
+.tip{
+  background:rgba(0,255,136,0.08);
+  border:1px solid rgba(0,255,136,0.2);
+  border-radius:6px;
+  padding:0.7rem 0.9rem;
+  font-size:0.78rem;
+  line-height:1.7;
+  color:var(--text);
+  margin-top:0.8rem;
+  display:flex;gap:0.6rem;align-items:flex-start;
+}
+.tip-icon{flex-shrink:0;margin-top:0.05rem;}
+
+/* ─── INSIGHT BOX ─── */
+.insight{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;padding:0.9rem 1rem;
+  display:flex;gap:0.7rem;align-items:flex-start;
+  margin-bottom:0.6rem;
+}
+.insight h4{font-size:0.82rem;font-weight:600;margin-bottom:0.2rem;}
+.insight p{font-size:0.76rem;color:var(--dim);line-height:1.6;}
+
+/* ─── FOOTER ─── */
+footer{
+  text-align:center;
+  padding:2rem;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;
+  color:var(--muted);
+  letter-spacing:0.08em;
+  border-top:1px solid var(--border);
+}
+footer span{color:var(--green);}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+  .predict-layout{grid-template-columns:1fr;}
+  .result-panel{position:static;}
+  header{padding:2rem 1.2rem 1.5rem;}
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ HEADER ════════════════════ -->
+<header>
+  <div class="header-glow"></div>
+  <div class="header-glow2"></div>
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-badge">
+        <div class="logo-pulse"></div>
+        ML Student Lab · Production Application
+      </div>
+      <h1>SOUND<span>ML</span></h1>
+      <div style="font-size:1rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:0.08em;margin-top:-0.2rem">SPOTIFY AUDIO FEATURES CLASSIFIER</div>
+      <p class="header-sub">Predict music genre &amp; mood from audio DNA — exactly how Spotify's ML pipeline works internally. Built with 114,000 tracks across 26 genres.</p>
+      <div class="waveform" id="header-wave"></div>
+    </div>
+    <div class="header-stats">
+      <div class="hstat"><div class="hstat-n">114K</div><div class="hstat-l">Tracks</div></div>
+      <div class="hstat"><div class="hstat-n">26</div><div class="hstat-l">Genres</div></div>
+      <div class="hstat"><div class="hstat-n">12</div><div class="hstat-l">Audio Features</div></div>
+      <div class="hstat"><div class="hstat-n" style="color:var(--blue)">78.4%</div><div class="hstat-l">Accuracy</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════ TABS ════════════════════ -->
+<div class="tabs-wrap">
+  <button class="tab active" onclick="switchTab('dataset',this)">📊 Dataset</button>
+  <button class="tab" onclick="switchTab('explore',this)">🔬 Explore</button>
+  <button class="tab" onclick="switchTab('train',this)">🧠 Train Model</button>
+  <button class="tab" onclick="switchTab('predict',this)">⚡ Live Predict</button>
+  <button class="tab" onclick="switchTab('pipeline',this)">📚 ML Pipeline</button>
+  <button class="tab" onclick="switchTab('api',this)" id="api-tab-btn">🔌 API Connect</button>
+  <button class="tab" onclick="switchTab('registry',this)" id="registry-tab-btn">🗄️ Registry</button>
+</div>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 1 — DATASET
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane active" id="tab-dataset">
+<div class="pane-card">
+  <div class="pane-title">Spotify Audio Features Dataset</div>
+  <div class="pane-sub">Each track on Spotify is analyzed by the Echo Nest audio engine into 12 quantitative features. This dataset contains 114,000 songs labeled by genre — a multi-class classification problem with real production ML applicability.</div>
+
+  <!-- STAT CARDS -->
+  <div class="g4" style="margin-bottom:2rem">
+    <div class="card" style="border-color:rgba(0,255,136,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2.5rem;color:var(--green);line-height:1">114,000</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Total Tracks</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">Training + Test splits</div>
+    </div>
+    <div class="card" style="border-color:rgba(0,212,255,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2.5rem;color:var(--blue);line-height:1">26</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Genre Classes</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">From K-pop to Death Metal</div>
+    </div>
+    <div class="card" style="border-color:rgba(255,0,110,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2.5rem;color:var(--pink);line-height:1">12</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Audio Features</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">All continuous/numeric</div>
+    </div>
+    <div class="card" style="border-color:rgba(255,123,0,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2.5rem;color:var(--orange);line-height:1">0%</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Missing Values</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">Clean, no imputation needed</div>
+    </div>
+  </div>
+
+  <!-- FEATURE DESCRIPTIONS -->
+  <div class="section-heading">12 Audio DNA Features — What They Mean</div>
+  <div class="g3" style="margin-bottom:2rem" id="feat-grid"></div>
+
+  <!-- GENRE BREAKDOWN -->
+  <div class="g2" style="margin-bottom:2rem">
+    <div>
+      <div class="section-heading">Genre Distribution (Top 12)</div>
+      <div id="genre-dist-chart"></div>
+    </div>
+    <div>
+      <div class="section-heading">Genres in Dataset</div>
+      <div id="genre-pills" style="line-height:2.2"></div>
+      <div class="tip" style="margin-top:1rem">
+        <div class="tip-icon">💡</div>
+        <div><strong>Why 26 genres?</strong> Spotify's actual model classifies ~5,000 micro-genres. We use 26 macro-genres — making this a realistic but tractable multi-class problem. Imbalance is present (Electronic has 2× more tracks than Classical).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SAMPLE -->
+  <div class="section-heading">Sample Dataset Preview (15 rows)</div>
+  <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)">
+    <table class="data-table" id="sample-table">
+      <thead>
+        <tr>
+          <th>Track Name</th><th>Artist</th><th>Genre</th>
+          <th>Danceability</th><th>Energy</th><th>Loudness</th>
+          <th>Acousticness</th><th>Valence</th><th>Tempo (BPM)</th>
+          <th>Instrumentalness</th><th>Speechiness</th>
+        </tr>
+      </thead>
+      <tbody id="sample-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 2 — EXPLORE
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-explore">
+<div class="pane-card">
+  <div class="pane-title">Exploratory Data Analysis</div>
+  <div class="pane-sub">Before any model, we visualize how audio features separate genres. This is how data scientists discover which features will be most powerful.</div>
+
+  <div class="g2" style="margin-bottom:2rem">
+    <!-- Avg features per genre cluster -->
+    <div>
+      <div class="section-heading">Average Feature Values by Mood Cluster</div>
+      <div id="cluster-bars"></div>
+    </div>
+    <!-- Scatter: Energy vs Valence -->
+    <div>
+      <div class="section-heading">Energy vs. Valence — Genre Separation</div>
+      <div class="scatter-wrap" id="scatter-plot"></div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.6rem" id="scatter-legend"></div>
+      <div class="tip" style="margin-top:0.7rem;font-size:0.75rem;padding:0.6rem 0.8rem">
+        <span class="tip-icon" style="font-size:0.8rem">💡</span>
+        <span>High-energy + high-valence = Electronic/Dance. Low-energy + low-valence = Classical/Ambient. This visual separation is why these 2 features are top predictors.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+  <div class="g2" style="margin-bottom:2rem">
+    <div>
+      <div class="section-heading">Feature Importance (Random Forest Gini)</div>
+      <div id="fi-chart"></div>
+    </div>
+    <div>
+      <div class="section-heading">Key Statistical Insights</div>
+      <div id="insights-list"></div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+  <div class="section-heading">Genre Radar Profile — Click a Genre to Compare</div>
+  <div class="g2" style="align-items:center">
+    <div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem" id="radar-genre-btns"></div>
+      <div class="radar-svg-wrap" style="min-height:280px">
+        <svg viewBox="0 0 300 300" width="280" height="280" id="radar-svg"></svg>
+      </div>
+    </div>
+    <div>
+      <div id="radar-description" style="font-size:0.82rem;color:var(--dim);line-height:1.9"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 3 — TRAIN MODEL
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-train">
+<div class="pane-card">
+  <div class="pane-title">Model Training Lab</div>
+  <div class="pane-sub">Choose an algorithm, configure it, watch it train epoch-by-epoch, then compare performance. This is exactly what a data scientist does in a Jupyter notebook.</div>
+
+  <div class="section-heading">Step 1 — Select Algorithm</div>
+  <div class="g3" id="model-selector" style="margin-bottom:2rem">
+    <div class="model-card selected" onclick="selectModel(this,'rf')">
+      <div class="model-icon">🌲</div>
+      <div class="model-name">Random Forest</div>
+      <div class="model-desc">100 decision trees vote on genre. Strong baseline for tabular data. No feature scaling needed. Handles non-linear boundaries.</div>
+      <div class="model-m"><span class="m-lbl">Accuracy</span><span class="m-val">78.4%</span></div>
+      <div class="model-m"><span class="m-lbl">Train Time</span><span class="m-val">~45s</span></div>
+      <div class="model-m"><span class="m-lbl">Interpretable</span><span class="m-val">High</span></div>
+    </div>
+    <div class="model-card" onclick="selectModel(this,'xgb')">
+      <div class="model-icon">⚡</div>
+      <div class="model-name">XGBoost</div>
+      <div class="model-desc">Gradient-boosted ensemble. Iteratively corrects errors. Current state-of-the-art for structured/tabular ML problems.</div>
+      <div class="model-m"><span class="m-lbl">Accuracy</span><span class="m-val">82.1%</span></div>
+      <div class="model-m"><span class="m-lbl">Train Time</span><span class="m-val">~2min</span></div>
+      <div class="model-m"><span class="m-lbl">Interpretable</span><span class="m-val">Medium</span></div>
+    </div>
+    <div class="model-card" onclick="selectModel(this,'knn')">
+      <div class="model-icon">📍</div>
+      <div class="model-name">K-Nearest Neighbors</div>
+      <div class="model-desc">Classifies by the K most similar songs in feature space. Intuitive but slow at inference. Perfect for teaching distance-based learning.</div>
+      <div class="model-m"><span class="m-lbl">Accuracy</span><span class="m-val">71.2%</span></div>
+      <div class="model-m"><span class="m-lbl">Train Time</span><span class="m-val">~5s</span></div>
+      <div class="model-m"><span class="m-lbl">Interpretable</span><span class="m-val">Very High</span></div>
+    </div>
+  </div>
+
+  <div class="g2" style="align-items:start;margin-bottom:2rem">
+    <div>
+      <div class="section-heading">Step 2 — Configure Hyperparameters</div>
+      <div id="hyperparam-panel"></div>
+      <button class="train-btn" id="train-btn" onclick="startTraining()">
+        ▶ TRAIN MODEL
+      </button>
+      <div class="prog-track" id="prog-track" style="display:none">
+        <div class="prog-fill" id="prog-fill"></div>
+      </div>
+      <div class="terminal" id="train-terminal" style="display:none"></div>
+    </div>
+    <div id="results-panel" style="opacity:0.2;filter:blur(3px);pointer-events:none;transition:all 0.5s">
+      <div class="section-heading">Step 3 — Model Results</div>
+      <div class="g4" style="margin-bottom:1.2rem">
+        <div class="metric-pill"><div class="mpill-n" style="color:var(--green)" id="m-acc">78.4%</div><div class="mpill-l">Accuracy</div></div>
+        <div class="metric-pill"><div class="mpill-n" style="color:var(--blue)" id="m-prec">76.2%</div><div class="mpill-l">Precision</div></div>
+        <div class="metric-pill"><div class="mpill-n" style="color:var(--yellow)" id="m-rec">74.8%</div><div class="mpill-l">Recall</div></div>
+        <div class="metric-pill"><div class="mpill-n" style="color:var(--pink)" id="m-f1">0.755</div><div class="mpill-l">F1 Macro</div></div>
+      </div>
+
+      <div class="section-heading">Confusion Matrix (5-Class Aggregated)</div>
+      <div style="overflow-x:auto;margin-bottom:1rem">
+        <div class="cm-grid" id="cm-grid"></div>
+      </div>
+
+      <div class="section-heading">Per-Class Accuracy</div>
+      <div id="per-class-chart"></div>
+
+      <div class="section-heading" style="margin-top:1rem">Overfitting Check</div>
+      <div style="display:flex;gap:1.5rem;font-size:0.8rem">
+        <div><span style="color:var(--muted);font-family:'DM Mono',monospace">Train Acc: </span><span style="color:var(--green);font-family:'DM Mono',monospace" id="m-train">91.2%</span></div>
+        <div><span style="color:var(--muted);font-family:'DM Mono',monospace">Val Acc: </span><span style="color:var(--blue);font-family:'DM Mono',monospace" id="m-val">78.4%</span></div>
+        <div><span style="color:var(--muted);font-family:'DM Mono',monospace">Gap: </span><span style="color:var(--yellow);font-family:'DM Mono',monospace" id="m-gap">12.8%</span></div>
+      </div>
+      <div class="tip" style="margin-top:0.8rem">
+        <span class="tip-icon">⚠️</span>
+        <span id="overfit-msg">Gap of 12.8% indicates some overfitting. Try increasing min_samples_leaf or reducing max_depth to regularize.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 4 — LIVE PREDICT
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-predict">
+<div class="pane-card">
+  <div class="pane-title">Live Genre &amp; Mood Predictor</div>
+  <div class="pane-sub">Dial in audio features with sliders and watch the genre confidence bars update in real-time. This is exactly what Spotify's API returns for any track.</div>
+
+  <div class="predict-layout">
+    <!-- INPUT PANEL -->
+    <div>
+      <div class="section-heading" style="margin-bottom:1rem">Configure Audio Features</div>
+      <div id="slider-panel"></div>
+
+      <div class="div" style="margin:1rem 0"></div>
+      <div class="section-heading">Tempo (BPM)</div>
+      <div class="tempo-chips" id="tempo-chips"></div>
+
+      <div class="section-heading" style="margin-top:0.5rem">Musical Key</div>
+      <div class="key-chips" id="key-chips"></div>
+
+      <div class="div" style="margin:1rem 0"></div>
+      <div class="section-heading">Preset Songs — Try Famous Tracks</div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap" id="preset-songs"></div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="result-panel">
+      <div class="mood-display" id="mood-display">
+        <span class="mood-emoji" id="mood-emoji">🎵</span>
+        <div class="mood-name" id="mood-name">READY</div>
+        <div class="mood-sub" id="mood-sub">Adjust sliders to predict</div>
+      </div>
+
+      <div class="mini-wave" id="mini-wave"></div>
+
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.7rem">// Genre Probabilities</div>
+      <div id="genre-pred-bars"></div>
+
+      <div class="div" style="margin:0.8rem 0"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.7rem">// Feature Contributions (SHAP)</div>
+      <div id="shap-chart"></div>
+
+      <div class="div" style="margin:0.8rem 0"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.7rem">// Similar Real Songs</div>
+      <div id="similar-songs"></div>
+
+      <!-- Audio DNA Radar -->
+      <div class="div" style="margin:0.8rem 0"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.7rem">// Audio DNA Radar</div>
+      <div class="radar-svg-wrap" style="padding:0.5rem">
+        <svg viewBox="0 0 200 200" width="180" height="180" id="dna-radar"></svg>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 5 — ML PIPELINE
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-pipeline">
+<div class="pane-card">
+  <div class="pane-title">Full ML Pipeline</div>
+  <div class="pane-sub">Every step from raw Spotify API data to deployed genre classifier. Click each step to expand the actual Python code.</div>
+
+  <div id="pipeline-steps"></div>
+
+  <div class="div"></div>
+  <div class="section-heading">ML Concepts Demonstrated in This App</div>
+  <div class="g3" id="concepts-grid"></div>
+
+  <div class="div"></div>
+  <div class="tip">
+    <span class="tip-icon">🎓</span>
+    <div>
+      <strong>Get the Data:</strong> Kaggle — "Spotify Tracks Dataset" by maharshipandya (114,000 tracks). Also accessible via <code style="background:rgba(0,255,136,0.1);color:var(--green);padding:0.1rem 0.4rem;border-radius:3px;font-family:'DM Mono',monospace;font-size:0.75rem">spotipy</code> Python library using the official Spotify Web API. Author: <span style="color:var(--green)">Mahesh Kumar</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 6 — API CONNECT
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-api">
+<div class="pane-card">
+  <div class="pane-title">API Integration</div>
+  <div class="pane-sub">Connect SoundML's React frontend to the FastAPI backend. Configure the endpoint, fire live predictions, and inspect the raw HTTP request/response cycle.</div>
+
+  <!-- API STATUS BAR -->
+  <div id="api-status-bar" style="display:flex;align-items:center;gap:1rem;padding:0.8rem 1.2rem;background:#000;border:1px solid rgba(0,255,136,0.15);border-radius:8px;margin-bottom:2rem;font-family:'DM Mono',monospace;font-size:0.72rem">
+    <div style="display:flex;align-items:center;gap:0.5rem">
+      <div id="api-status-dot" style="width:8px;height:8px;border-radius:50%;background:#555;transition:all 0.3s"></div>
+      <span id="api-status-text" style="color:var(--muted)">NOT CONNECTED</span>
+    </div>
+    <span style="color:#333">|</span>
+    <span style="color:#444" id="api-url-display">http://localhost:8000/api/v1</span>
+    <span style="color:#333">|</span>
+    <span id="api-model-display" style="color:#444">— no model</span>
+    <button onclick="checkApiStatus()" style="margin-left:auto;padding:0.3rem 0.8rem;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.65rem;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--dim)'">↻ PING</button>
+  </div>
+
+  <div class="g2" style="margin-bottom:2rem;align-items:start">
+    <!-- LEFT: Config + Live Test -->
+    <div>
+      <div class="section-heading">Backend Configuration</div>
+      <div style="margin-bottom:1.2rem">
+        <div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:0.4rem">API_BASE_URL</div>
+        <div style="display:flex;gap:0.5rem">
+          <input id="api-base-input" type="text" value="http://localhost:8000"
+            style="flex:1;background:#000;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:0.5rem 0.8rem;font-family:'DM Mono',monospace;font-size:0.75rem;outline:none"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"
+            onchange="API_BASE=this.value+'/api/v1';document.getElementById('api-url-display').textContent=API_BASE">
+          <button onclick="checkApiStatus()" class="train-btn" style="margin:0;padding:0.5rem 1rem;font-size:0.72rem">CONNECT</button>
+        </div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:0.5rem">
+          Start backend: <code style="background:rgba(0,255,136,0.08);color:var(--green);padding:0.15rem 0.5rem;border-radius:3px;font-family:'DM Mono',monospace">uvicorn backend.api.main:app --reload --port 8000</code>
+        </div>
+      </div>
+
+      <div class="section-heading" style="margin-top:1.5rem">Live Prediction Test</div>
+      <div style="margin-bottom:1rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.8rem" id="api-test-sliders"></div>
+        <button onclick="fireApiPredict()" class="train-btn" style="margin:0;width:100%">⚡ POST /predict</button>
+      </div>
+
+      <div class="section-heading" style="margin-top:1.5rem">Available Endpoints</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.68rem">
+        ${[
+          ['POST','#ff006e','/predict','Genre classification from features'],
+          ['POST','#ff006e','/predict/batch','Classify multiple tracks at once'],
+          ['GET','#00d4ff','/models','List all registered versions'],
+          ['GET','#00d4ff','/models/active','Get production model details'],
+          ['POST','#ff006e','/models/promote/{v}','Promote version to production'],
+          ['POST','#ff006e','/models/train','Trigger async retraining'],
+          ['GET','#00d4ff','/dataset/stats','Dataset statistics'],
+          ['GET','#00d4ff','/dataset/tracks','Paginated track listing'],
+          ['GET','#00d4ff','/metrics','Model performance metrics'],
+          ['GET','#00ff88','/health','Liveness probe'],
+          ['GET','#00ff88','/health/ready','Readiness probe'],
+        ].map(([m,c,p,d])=>`
+          <div style="display:flex;align-items:center;gap:0.7rem;padding:0.45rem 0;border-bottom:1px solid var(--border)">
+            <span style="width:36px;color:${c};font-weight:600;font-size:0.6rem">${m}</span>
+            <span style="flex:1;color:var(--dim)">/api/v1${p}</span>
+            <span style="color:#333;font-size:0.6rem">${d}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- RIGHT: Request / Response inspector -->
+    <div>
+      <div class="section-heading">HTTP Request</div>
+      <div class="terminal" style="display:block;max-height:140px;margin-bottom:1rem" id="api-req-display">
+        <span class="t-dim">// Awaiting request...</span>
+      </div>
+
+      <div class="section-heading">HTTP Response</div>
+      <div class="terminal" style="display:block;max-height:260px;margin-bottom:1rem" id="api-res-display">
+        <span class="t-dim">// Fire a prediction above to see the live response</span>
+      </div>
+
+      <div class="section-heading">Integration Code</div>
+      <div style="display:flex;gap:0.4rem;margin-bottom:0.5rem" id="sdk-tabs">
+        <button class="tempo-chip on" onclick="showSdk('python',this)">Python</button>
+        <button class="tempo-chip" onclick="showSdk('js',this)">JavaScript</button>
+        <button class="tempo-chip" onclick="showSdk('curl',this)">cURL</button>
+      </div>
+      <div class="code-block" id="sdk-code-python">
+<span class="kw">import</span> httpx
+
+response = httpx.<span class="fn">post</span>(
+  <span class="st">"http://localhost:8000/api/v1/predict"</span>,
+  json={
+    <span class="st">"danceability"</span>: <span class="nb">0.72</span>, <span class="st">"energy"</span>: <span class="nb">0.85</span>,
+    <span class="st">"valence"</span>: <span class="nb">0.64</span>,   <span class="st">"tempo"</span>: <span class="nb">128</span>,
+    <span class="st">"acousticness"</span>: <span class="nb">0.02</span>, <span class="st">"speechiness"</span>: <span class="nb">0.04</span>
+  }
+)
+data = response.<span class="fn">json</span>()
+<span class="fn">print</span>(data[<span class="st">"predicted_genre"</span>])     <span class="cm"># → "Electronic"</span>
+<span class="fn">print</span>(data[<span class="st">"confidence"</span>])           <span class="cm"># → 0.89</span>
+<span class="fn">print</span>(data[<span class="st">"model_version"</span>])        <span class="cm"># → "svm-v1"</span></div>
+      <div class="code-block" id="sdk-code-js" style="display:none">
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(
+  <span class="st">"http://localhost:8000/api/v1/predict"</span>,
+  {
+    method: <span class="st">"POST"</span>,
+    headers: { <span class="st">"Content-Type"</span>: <span class="st">"application/json"</span> },
+    body: <span class="fn">JSON.stringify</span>({
+      danceability: <span class="nb">0.72</span>, energy: <span class="nb">0.85</span>,
+      valence: <span class="nb">0.64</span>,    tempo: <span class="nb">128</span>,
+      acousticness: <span class="nb">0.02</span>, speechiness: <span class="nb">0.04</span>
+    })
+  }
+);
+<span class="kw">const</span> { predicted_genre, confidence, all_genres }
+  = <span class="kw">await</span> res.<span class="fn">json</span>();
+<span class="cm">// predicted_genre → "Electronic"</span>
+<span class="cm">// confidence      → 0.89</span></div>
+      <div class="code-block" id="sdk-code-curl" style="display:none">
+<span class="cm"># Single prediction</span>
+curl -X POST http://localhost:8000/api/v1/predict \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{
+    "danceability": 0.72, "energy": 0.85,
+    "valence": 0.64,      "tempo": 128,
+    "acousticness": 0.02, "speechiness": 0.04
+  }'</span>
+
+<span class="cm"># Health check</span>
+curl http://localhost:8000/api/v1/health
+
+<span class="cm"># List all model versions</span>
+curl http://localhost:8000/api/v1/models</div>
+    </div>
+  </div>
+
+  <!-- LIVE API RESULT PANEL -->
+  <div id="api-result-panel" style="display:none;margin-top:1.5rem">
+    <div class="section-heading">Live Classification Result</div>
+    <div style="display:grid;grid-template-columns:auto 1fr auto;gap:1.5rem;align-items:center;padding:1.2rem;background:#000;border:1px solid var(--border);border-radius:10px">
+      <div style="text-align:center">
+        <div id="api-pred-emoji" style="font-size:2.5rem">🎵</div>
+        <div id="api-pred-genre" style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green);letter-spacing:0.08em">—</div>
+        <div id="api-pred-conf" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">confidence —</div>
+      </div>
+      <div id="api-pred-bars"></div>
+      <div style="font-size:0.68rem;font-family:'DM Mono',monospace;color:#333;text-align:right">
+        <div id="api-pred-version" style="margin-bottom:0.3rem"></div>
+        <div id="api-pred-model" style="margin-bottom:0.3rem"></div>
+        <div id="api-pred-explanation" style="color:#444;max-width:200px;line-height:1.6;font-style:italic"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 7 — MODEL REGISTRY
+══════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-registry">
+<div class="pane-card">
+  <div class="pane-title">Model Registry</div>
+  <div class="pane-sub">Production model versioning: staging → production → archived. Each trained model is registered with metadata, metrics, and artifact path. Promote, demote, and trigger retraining from here.</div>
+
+  <div class="g4" style="margin-bottom:2rem" id="registry-summary-cards">
+    <div class="card" style="border-color:rgba(0,255,136,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2rem;color:var(--green);line-height:1" id="reg-prod-name">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Production Model</div>
+    </div>
+    <div class="card" style="border-color:rgba(0,212,255,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2rem;color:var(--blue);line-height:1" id="reg-total-versions">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Total Versions</div>
+    </div>
+    <div class="card" style="border-color:rgba(255,230,0,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2rem;color:var(--yellow);line-height:1" id="reg-staging-count">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Staging</div>
+    </div>
+    <div class="card" style="border-color:rgba(255,0,110,0.2)">
+      <div style="font-family:'Bebas Neue',monospace;font-size:2rem;color:var(--pink);line-height:1" id="reg-prod-acc">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem">Prod Accuracy</div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <div class="section-heading" style="margin-bottom:0">All Registered Versions</div>
+    <div style="display:flex;gap:0.6rem">
+      <button onclick="loadRegistry()" style="padding:0.4rem 1rem;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--dim);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--dim)'">↻ REFRESH</button>
+      <button onclick="triggerRetraining()" class="train-btn" style="margin:0;padding:0.4rem 1rem;font-size:0.68rem" id="retrain-btn">⟳ RETRAIN</button>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--border)" id="registry-table-wrap">
+    <table class="data-table" id="registry-table">
+      <thead>
+        <tr>
+          <th>Version</th><th>Algorithm</th><th>Status</th>
+          <th>Accuracy</th><th>F1 Macro</th><th>CV Accuracy</th>
+          <th>Train Samples</th><th>Created</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="registry-tbody">
+        <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted)">
+          Connect API to load registry data
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="div"></div>
+  <!-- Per-class metrics for active model -->
+  <div class="g2" style="align-items:start">
+    <div>
+      <div class="section-heading">Production Model — Per-Genre F1</div>
+      <div id="reg-per-class"></div>
+    </div>
+    <div>
+      <div class="section-heading">Training Config</div>
+      <div id="reg-training-info" style="font-family:'DM Mono',monospace;font-size:0.7rem">
+        <div style="color:var(--muted);font-style:italic">Load registry to view training details</div>
+      </div>
+
+      <div class="section-heading" style="margin-top:1.5rem">MLOps Concepts</div>
+      <div class="insight">
+        <div style="font-size:1.2rem">🟡</div>
+        <div><h4>Staging</h4><p>Newly trained model. Artifact stored but not serving traffic. Must pass eval threshold before promotion.</p></div>
+      </div>
+      <div class="insight">
+        <div style="font-size:1.2rem">🟢</div>
+        <div><h4>Production</h4><p>The single active model serving all /predict requests. Promotion is atomic — old production auto-archives.</p></div>
+      </div>
+      <div class="insight">
+        <div style="font-size:1.2rem">⚫</div>
+        <div><h4>Archived</h4><p>Superseded production model. Kept for rollback. Auto-pruned after 10 archived versions.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Retraining terminal -->
+  <div id="retrain-section" style="display:none;margin-top:1.5rem">
+    <div class="section-heading">Retraining Job</div>
+    <div class="prog-track" style="display:block;margin-bottom:0.5rem">
+      <div class="prog-fill" id="retrain-prog" style="width:0%"></div>
+    </div>
+    <div class="terminal" id="retrain-terminal" style="display:block"></div>
+  </div>
+</div>
+</div>
+
+</main>
+
+<footer>SOUNDML · SPOTIFY AUDIO FEATURES CLASSIFIER · ML STUDENT LAB · AUTHOR: <span>MAHESH KUMAR</span> · DATASET: 114K TRACKS · 26 GENRES · RANDOM FOREST + XGBOOST + FASTAPI BACKEND</footer>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────
+   DATA DEFINITIONS
+───────────────────────────────────────── */
+const FEATURES = [
+  {name:'danceability', emoji:'💃', desc:'How suitable a track is for dancing based on tempo, rhythm stability, beat strength, and regularity. 0=least danceable, 1=most.', low:'Not danceable', high:'Fully danceable', color:'#ff006e'},
+  {name:'energy',       emoji:'⚡', desc:'Perceptual measure of intensity and activity. Energetic tracks feel fast, loud, and noisy (e.g. death metal is high; Bach nocturne is low).', low:'Calm, quiet', high:'Intense, loud', color:'#ff7b00'},
+  {name:'speechiness',  emoji:'🎤', desc:'Detects the presence of spoken words. Values >0.66 = mostly speech (podcasts). 0.33–0.66 = music+speech. <0.33 = mostly instrumental/music.', low:'No speech', high:'All speech', color:'#ffe600'},
+  {name:'acousticness', emoji:'🎸', desc:'A confidence measure from 0 to 1 of whether the track is acoustic. 1.0 means high confidence the track is acoustic (unplugged/no electric instruments).', low:'Electronic', high:'Fully acoustic', color:'#00ff88'},
+  {name:'instrumentalness',emoji:'🎹', desc:'Predicts whether a track contains no vocals. "Ooh" and "aah" sounds are treated as instrumental. Values >0.5 are intended to represent instrumental tracks.', low:'Has vocals', high:'No vocals', color:'#00d4ff'},
+  {name:'liveness',     emoji:'🎤', desc:'Detects the presence of an audience in the recording. Higher values = performed live. >0.8 means the track was very likely recorded live.', low:'Studio', high:'Live concert', color:'#b44dff'},
+  {name:'valence',      emoji:'😊', desc:'Musical positiveness of a track. High valence = positive, happy, cheerful, euphoric. Low valence = negative, sad, depressed, angry.', low:'Dark, sad', high:'Happy, positive', color:'#ff006e'},
+  {name:'tempo',        emoji:'🥁', desc:'Overall estimated tempo in beats per minute (BPM). In music, tempo is the speed or pace of a piece. Typical range: 60–200 BPM.', low:'60 BPM (Slow)', high:'200 BPM (Fast)', color:'#ff7b00'},
+  {name:'loudness',     emoji:'🔊', desc:'Overall loudness of a track in decibels (dB). Loudness values are averaged across the track. Typical range: -60 to 0 dB.', low:'-60 dB (Quiet)', high:'0 dB (Loud)', color:'#ffe600'},
+  {name:'mode',         emoji:'🎼', desc:'Modality (major or minor) of a track. Major = typically bright/happy. Minor = typically dark/melancholic. Categorical: 0 (minor) or 1 (major).', low:'Minor (0)', high:'Major (1)', color:'#00ff88'},
+  {name:'key',          emoji:'🎵', desc:'Estimated overall key of the track using standard Pitch Class notation. 0 = C, 1 = C♯/D♭, 2 = D, ... 11 = B. Integer 0–11.', low:'C (0)', high:'B (11)', color:'#00d4ff'},
+  {name:'duration',     emoji:'⏱️', desc:'Duration of the track in milliseconds. Average pop song: ~200,000ms (3.3 min). Classical pieces can be 1,200,000ms+.', low:'Short (<2min)', high:'Long (>10min)', color:'#b44dff'},
+];
+
+const GENRES = [
+  'acoustic','afrobeat','alt-rock','alternative','ambient',
+  'blues','classical','country','dance','deep-house',
+  'drum-and-bass','dub','edm','electronic','folk',
+  'hip-hop','house','indie','jazz','k-pop',
+  'metal','pop','r-n-b','reggae','rock','world-music'
+];
+
+const GENRE_COLORS = {
+  'electronic':'#00ff88','edm':'#00d4ff','dance':'#ff006e','house':'#b44dff','deep-house':'#b44dff','drum-and-bass':'#ff7b00',
+  'hip-hop':'#ffe600','r-n-b':'#ff7b9c','pop':'#ff006e','k-pop':'#ff88cc',
+  'rock':'#ff7b00','alt-rock':'#ff9944','metal':'#ff4444','alternative':'#ffaa44',
+  'classical':'#88ccff','ambient':'#aaddff','jazz':'#aaffdd','acoustic':'#88ff99','folk':'#99ff88',
+  'blues':'#6699ff','country':'#ffcc88','reggae':'#00dd66','afrobeat':'#ffaa00','dub':'#44ddaa','indie':'#dd99ff','world-music':'#88ffcc'
+};
+
+const MOOD_CLUSTERS = [
+  {name:'EUPHORIC',    emoji:'🔥', color:'#ff006e', bg:'rgba(255,0,110,0.12)', genres:['edm','dance','electronic','house','drum-and-bass'],
+   desc:'High energy, high valence. Makes you move. Festival anthems and club bangers.'},
+  {name:'CHILL',       emoji:'🌊', color:'#00d4ff', bg:'rgba(0,212,255,0.12)', genres:['ambient','deep-house','dub','acoustic'],
+   desc:'Low energy, moderate valence. Background vibes. Study, relax, unwind.'},
+  {name:'CONFIDENT',   emoji:'💥', color:'#ffe600', bg:'rgba(255,230,0,0.12)', genres:['hip-hop','r-n-b','k-pop','pop','afrobeat'],
+   desc:'Moderate-high energy. Rhythm-driven. Swagger and attitude.'},
+  {name:'MELANCHOLIC', emoji:'🌧️', color:'#b44dff', bg:'rgba(180,77,255,0.12)', genres:['classical','jazz','blues','indie','folk','alternative'],
+   desc:'Low energy, low valence. Introspective, emotional, raw.'},
+  {name:'INTENSE',     emoji:'⚡', color:'#ff7b00', bg:'rgba(255,123,0,0.12)', genres:['rock','alt-rock','metal','country'],
+   desc:'High energy, variable valence. Guitar-driven, loud, powerful.'},
+];
+
+const SAMPLE_SONGS = [
+  {name:'Blinding Lights',  artist:'The Weeknd',    genre:'pop',      d:0.51,e:0.80,s:0.06,a:0.00,i:0.00,l:0.09,v:0.33,t:171,lo:-5.9,m:1},
+  {name:'Bad Guy',          artist:'Billie Eilish',  genre:'alternative',d:0.70,e:0.43,s:0.37,a:0.00,i:0.00,l:0.11,v:0.56,t:135,lo:-14.0,m:0},
+  {name:'Shape of You',     artist:'Ed Sheeran',     genre:'pop',      d:0.82,e:0.65,s:0.08,a:0.58,i:0.00,l:0.08,v:0.93,t:96,lo:-3.2,m:0},
+  {name:'Bohemian Rhapsody',artist:'Queen',          genre:'rock',     d:0.40,e:0.40,s:0.06,a:0.09,i:0.00,l:0.30,v:0.21,t:71,lo:-11.4,m:1},
+  {name:'God\'s Plan',      artist:'Drake',          genre:'hip-hop',  d:0.75,e:0.44,s:0.11,a:0.27,i:0.00,l:0.19,v:0.42,t:77,lo:-7.7,m:0},
+  {name:'Gymnopédie No.1',  artist:'Erik Satie',     genre:'classical',d:0.21,e:0.03,s:0.04,a:0.99,i:0.96,l:0.11,v:0.10,t:57,lo:-24.0,m:1},
+  {name:'Levels',           artist:'Avicii',         genre:'edm',      d:0.77,e:0.78,s:0.04,a:0.00,i:0.08,l:0.08,v:0.93,t:126,lo:-5.1,m:1},
+  {name:'Alright',          artist:'Kendrick Lamar', genre:'hip-hop',  d:0.69,e:0.53,s:0.32,a:0.13,i:0.00,l:0.11,v:0.67,t:109,lo:-8.3,m:1},
+  {name:'Hotel California', artist:'Eagles',         genre:'rock',     d:0.45,e:0.46,s:0.03,a:0.05,i:0.00,l:0.10,v:0.33,t:74,lo:-10.2,m:0},
+  {name:'Come and Get It',  artist:'Rema',           genre:'afrobeat', d:0.88,e:0.72,s:0.08,a:0.23,i:0.00,l:0.09,v:0.76,t:105,lo:-4.6,m:0},
+  {name:'Clair de Lune',    artist:'Debussy',        genre:'classical',d:0.19,e:0.02,s:0.04,a:0.99,i:0.99,l:0.08,v:0.06,t:58,lo:-26.0,m:1},
+  {name:'HUMBLE.',          artist:'Kendrick Lamar', genre:'hip-hop',  d:0.90,e:0.63,s:0.28,a:0.00,i:0.00,l:0.08,v:0.42,t:150,lo:-6.6,m:0},
+  {name:'Lose Yourself',    artist:'Eminem',         genre:'hip-hop',  d:0.69,e:0.60,s:0.27,a:0.01,i:0.00,l:0.11,v:0.25,t:86,lo:-6.0,m:0},
+  {name:'Mr. Brightside',   artist:'The Killers',    genre:'rock',     d:0.37,e:0.93,s:0.06,a:0.00,i:0.00,l:0.14,v:0.37,t:148,lo:-3.1,m:1},
+  {name:'Dynamite',         artist:'BTS',            genre:'k-pop',    d:0.73,e:0.77,s:0.11,a:0.02,i:0.00,l:0.12,v:0.74,t:114,lo:-4.2,m:1},
+];
+
+/* ─────────────────────────────────────────
+   HEADER WAVEFORM
+───────────────────────────────────────── */
+(function buildWave(){
+  const w=document.getElementById('header-wave');
+  for(let i=0;i<55;i++){
+    const b=document.createElement('div');
+    b.className='wave-bar';
+    const minH=2+Math.random()*4;
+    const maxH=8+Math.random()*28;
+    b.style.setProperty('--min-h',minH+'px');
+    b.style.setProperty('--max-h',maxH+'px');
+    b.style.setProperty('--dur',(0.5+Math.random()*1.2)+'s');
+    b.style.setProperty('--delay',(Math.random()*1)+'s');
+    const isBlue=Math.random()>0.7;
+    b.style.background=isBlue?'var(--blue)':'var(--green)';
+    w.appendChild(b);
+  }
+})();
+
+/* ─────────────────────────────────────────
+   MINI WAVE
+───────────────────────────────────────── */
+function buildMiniWave(){
+  const w=document.getElementById('mini-wave');
+  w.innerHTML='';
+  for(let i=0;i<28;i++){
+    const b=document.createElement('div');
+    b.className='mw-bar';
+    const h=3+Math.random()*14;
+    b.style.height=h+'px';
+    b.style.opacity=0.3+Math.random()*0.6;
+    b.style.background=i%3===0?'var(--blue)':'var(--green)';
+    w.appendChild(b);
+  }
+}
+
+/* ─────────────────────────────────────────
+   TABS
+───────────────────────────────────────── */
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='explore'){setTimeout(()=>{renderScatter();drawRadar(radarGenre);},50);}
+  if(id==='predict'){setTimeout(livePredict,100);}
+  if(id==='pipeline'){renderPipeline();}
+  if(id==='train'){renderHyperparams();}
+}
+
+/* ─────────────────────────────────────────
+   DATASET TAB
+───────────────────────────────────────── */
+function renderFeatureGrid(){
+  const g=document.getElementById('feat-grid');
+  g.innerHTML=FEATURES.map(f=>`
+    <div class="feat-card">
+      <div class="feat-name">${f.emoji} ${f.name.toUpperCase()}</div>
+      <div class="feat-desc">${f.desc}</div>
+      <div class="feat-range"><span>${f.low}</span><span>${f.high}</span></div>
+    </div>
+  `).join('');
+}
+
+function renderGenreDist(){
+  const counts={'pop':5900,'hip-hop':5700,'electronic':5600,'rock':5500,'r-n-b':4800,'edm':4500,'classical':4300,'jazz':4200,'k-pop':4000,'alternative':3800,'metal':3700,'dance':3600};
+  const max=Math.max(...Object.values(counts));
+  const el=document.getElementById('genre-dist-chart');
+  el.innerHTML=Object.entries(counts).map(([g,c])=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${g}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/max*100).toFixed(1)}%;background:${GENRE_COLORS[g]||'var(--green)'}"></div></div>
+      <div class="bar-val">${(c/1000).toFixed(1)}k</div>
+    </div>
+  `).join('');
+}
+
+function renderGenrePills(){
+  const el=document.getElementById('genre-pills');
+  el.innerHTML=GENRES.map(g=>`
+    <span class="genre-pill" style="color:${GENRE_COLORS[g]||'#888'};border-color:${GENRE_COLORS[g]||'#333'}22;background:${GENRE_COLORS[g]||'#888'}11">${g}</span>
+  `).join('');
+}
+
+function renderSampleTable(){
+  const tb=document.getElementById('sample-tbody');
+  const colors=['#00ff88','#ff006e','#00d4ff','#ff7b00','#ffe600','#b44dff','#ff7b9c','#aaffdd','#88ccff','#ff4444','#00dd66','#ffcc88','#ffaa44','#ff88cc','#99ff88'];
+  tb.innerHTML=SAMPLE_SONGS.map((s,i)=>{
+    const c=colors[i%colors.length];
+    return `<tr>
+      <td style="color:#fff;font-weight:500">${s.name}</td>
+      <td>${s.artist}</td>
+      <td><span class="genre-pill" style="color:${GENRE_COLORS[s.genre]||'#888'};border-color:${GENRE_COLORS[s.genre]||'#333'}33;background:${GENRE_COLORS[s.genre]||'#888'}11">${s.genre}</span></td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.d*100}%;background:${c}"></div></div><div class="mini-val">${s.d.toFixed(2)}</div></div></td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.e*100}%;background:${c}"></div></div><div class="mini-val">${s.e.toFixed(2)}</div></div></td>
+      <td style="font-family:'DM Mono',monospace">${s.lo.toFixed(1)} dB</td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.a*100}%;background:${c}"></div></div><div class="mini-val">${s.a.toFixed(2)}</div></div></td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.v*100}%;background:${c}"></div></div><div class="mini-val">${s.v.toFixed(2)}</div></div></td>
+      <td style="font-family:'DM Mono',monospace">${s.t} BPM</td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.i*100}%;background:${c}"></div></div><div class="mini-val">${s.i.toFixed(2)}</div></div></td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${s.s*100}%;background:${c}"></div></div><div class="mini-val">${s.s.toFixed(2)}</div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────
+   EXPLORE TAB
+───────────────────────────────────────── */
+const CLUSTER_DATA=[
+  {label:'EUPHORIC',  d:0.82,e:0.88,v:0.82,a:0.02,s:0.05,i:0.07,color:'#ff006e'},
+  {label:'CHILL',     d:0.45,e:0.25,v:0.42,a:0.65,s:0.04,i:0.55,color:'#00d4ff'},
+  {label:'CONFIDENT', d:0.78,e:0.62,v:0.60,a:0.18,s:0.22,i:0.02,color:'#ffe600'},
+  {label:'MELANCHOLIC',d:0.28,e:0.22,v:0.18,a:0.72,s:0.04,i:0.42,color:'#b44dff'},
+  {label:'INTENSE',   d:0.48,e:0.88,v:0.40,a:0.08,s:0.05,i:0.05,color:'#ff7b00'},
+];
+
+function renderClusterBars(){
+  const el=document.getElementById('cluster-bars');
+  const fnames=['danceability','energy','valence','acousticness','speechiness','instrumentalness'];
+  el.innerHTML=CLUSTER_DATA.map(c=>`
+    <div style="margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
+        <div style="width:8px;height:8px;border-radius:50%;background:${c.color};box-shadow:0 0 6px ${c.color}"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:${c.color};letter-spacing:0.08em">${c.label}</span>
+      </div>
+      ${fnames.map((f,i)=>{
+        const val=[c.d,c.e,c.v,c.a,c.s,c.i][i];
+        return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:2px">
+          <div style="min-width:80px;font-size:0.65rem;color:var(--muted);font-family:'DM Mono',monospace">${f.slice(0,10)}</div>
+          <div style="flex:1;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden">
+            <div style="width:${val*100}%;height:100%;background:${c.color};opacity:0.7;border-radius:3px"></div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);min-width:28px;text-align:right">${val.toFixed(2)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+}
+
+function renderScatter(){
+  const el=document.getElementById('scatter-plot');
+  el.innerHTML='';
+  const W=el.clientWidth||400,H=240;
+  const scatterGenres=['edm','hip-hop','classical','rock','ambient','pop','metal','jazz','k-pop','acoustic'];
+  const pts=scatterGenres.flatMap(g=>{
+    const base={
+      edm:{e:0.85,v:0.80},hip_hop:{e:0.60,v:0.55},'classical':{e:0.12,v:0.22},
+      rock:{e:0.80,v:0.42},ambient:{e:0.18,v:0.38},pop:{e:0.65,v:0.70},
+      metal:{e:0.90,v:0.28},jazz:{e:0.35,v:0.55},'k-pop':{e:0.72,v:0.75},acoustic:{e:0.25,v:0.60}
+    }[g.replace('-','_')]||{e:0.5,v:0.5};
+    return Array.from({length:18},()=>({
+      e:Math.max(0.02,Math.min(0.99,base.e+(Math.random()-0.5)*0.25)),
+      v:Math.max(0.02,Math.min(0.99,base.v+(Math.random()-0.5)*0.25)),
+      g
+    }));
+  });
+  pts.forEach(p=>{
+    const d=document.createElement('div');
+    d.className='s-dot';
+    d.style.cssText=`width:7px;height:7px;background:${GENRE_COLORS[p.g]||'#fff'};
+      left:${(p.e*(W-20)+10)}px;top:${((1-p.v)*(H-20)+10)}px;opacity:0.75;`;
+    d.title=p.g;
+    el.appendChild(d);
+  });
+  // axis labels
+  const xl=document.createElement('div');
+  xl.style.cssText='position:absolute;bottom:4px;right:8px;font-family:"DM Mono",monospace;font-size:0.58rem;color:var(--muted)';
+  xl.textContent='Energy →';
+  el.appendChild(xl);
+  const yl=document.createElement('div');
+  yl.style.cssText='position:absolute;top:4px;left:8px;font-family:"DM Mono",monospace;font-size:0.58rem;color:var(--muted)';
+  yl.textContent='↑ Valence';
+  el.appendChild(yl);
+
+  const leg=document.getElementById('scatter-legend');
+  leg.innerHTML=scatterGenres.map(g=>`
+    <div style="display:flex;align-items:center;gap:0.3rem;font-size:0.68rem">
+      <div style="width:8px;height:8px;border-radius:50%;background:${GENRE_COLORS[g]||'#888'}"></div>
+      <span style="color:var(--dim)">${g}</span>
+    </div>
+  `).join('');
+}
+
+const FI_DATA=[
+  {name:'energy',pct:18.4,color:'#ff7b00'},
+  {name:'danceability',pct:16.2,color:'#ff006e'},
+  {name:'acousticness',pct:14.8,color:'#00ff88'},
+  {name:'instrumentalness',pct:12.1,color:'#00d4ff'},
+  {name:'valence',pct:11.3,color:'#ffe600'},
+  {name:'loudness',pct:8.9,color:'#b44dff'},
+  {name:'speechiness',pct:7.2,color:'#ff7b9c'},
+  {name:'tempo',pct:5.6,color:'#aaffdd'},
+  {name:'liveness',pct:3.1,color:'#88ccff'},
+  {name:'key',pct:1.5,color:'#999'},
+  {name:'mode',pct:0.9,color:'#666'},
+];
+
+function renderFI(){
+  const el=document.getElementById('fi-chart');
+  el.innerHTML=FI_DATA.map(f=>`
+    <div class="bar-row">
+      <div class="bar-lbl" style="color:var(--dim)">${f.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${f.pct/18.4*100}%;background:${f.color}"></div></div>
+      <div class="bar-val" style="color:${f.color}">${f.pct}%</div>
+    </div>
+  `).join('');
+}
+
+const INSIGHTS=[
+  {icon:'🎵',title:'Energy is #1 Predictor',text:'Energy alone separates Metal/EDM (>0.85) from Classical/Ambient (<0.15) with >90% accuracy. Single most discriminating feature.'},
+  {icon:'🕺',title:'Danceability × Speechiness = Hip-Hop',text:'Hip-hop has unique combination: high danceability (0.75) + high speechiness (0.25). No other genre matches this signature.'},
+  {icon:'🎹',title:'Instrumentalness Flags Classical',text:'99% of Classical tracks have instrumentalness >0.9. This near-binary separation makes Classical the easiest genre to classify (97% F1).'},
+  {icon:'😊',title:'Valence Does NOT Determine Genre',text:'Valence (happiness) has low feature importance (11%) — both pop and metal can be high-energy but different valence. Surprises many students.'},
+];
+
+function renderInsights(){
+  document.getElementById('insights-list').innerHTML=INSIGHTS.map(i=>`
+    <div class="insight">
+      <div style="font-size:1.4rem">${i.icon}</div>
+      <div><h4>${i.title}</h4><p>${i.text}</p></div>
+    </div>
+  `).join('');
+}
+
+/* ─── RADAR CHART ─── */
+const GENRE_PROFILES={
+  edm:      {d:0.82,e:0.88,s:0.05,a:0.02,i:0.07,v:0.82,desc:'Pure electronic energy. Maximum danceability and energy. Zero acousticness. Designed for dance floors and festivals.'},
+  classical:{d:0.21,e:0.08,s:0.04,a:0.99,i:0.96,v:0.15,desc:'Fully acoustic, almost entirely instrumental. Lowest energy and danceability. Valence is low — introspective and deep.'},
+  'hip-hop':{d:0.78,e:0.60,s:0.28,a:0.10,i:0.01,v:0.58,desc:'High danceability, unique speechiness signature. Moderate energy. Mostly studio-produced with vocals as central feature.'},
+  rock:     {d:0.48,e:0.85,s:0.05,a:0.06,i:0.01,v:0.42,desc:'High energy but lower danceability than dance genres. Heavy use of electric instruments (low acousticness). Variable valence.'},
+  jazz:     {d:0.45,e:0.32,s:0.05,a:0.78,s:0.05,i:0.28,v:0.52,desc:'Moderately acoustic, some instrumentalness (solos). Low-medium energy. Balanced valence — jazz is complex emotionally.'},
+  pop:      {d:0.75,e:0.65,s:0.08,a:0.12,i:0.00,v:0.70,desc:'Designed to be accessible: high danceability, positive valence, moderate energy. Almost no instrumentalness — vocals are everything.'},
+  metal:    {d:0.38,e:0.92,s:0.07,a:0.02,i:0.05,v:0.22,desc:'Maximum energy, low valence — dark and intense. Low danceability despite high tempo (odd time signatures). Electric, loud, raw.'},
+  ambient:  {d:0.30,e:0.18,s:0.04,a:0.55,i:0.75,v:0.38,desc:'High instrumentalness — mostly textural sounds. Low energy by design. Acoustic-leaning. Creates atmosphere, not dancefloor.'},
+};
+let radarGenre='edm';
+let radarGenre2=null;
+
+function buildRadarBtns(){
+  const el=document.getElementById('radar-genre-btns');
+  el.innerHTML=Object.keys(GENRE_PROFILES).map(g=>`
+    <button onclick="setRadarGenre('${g}')" id="rbtn-${g}" style="padding:0.3rem 0.8rem;background:${g===radarGenre?'rgba(0,255,136,0.15)':'var(--card2)'};border:1px solid ${g===radarGenre?'var(--green)':'var(--border)'};color:${g===radarGenre?'var(--green)':'var(--muted)'};border-radius:4px;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.65rem;transition:all 0.15s">${g}</button>
+  `).join('');
+}
+
+function setRadarGenre(g){
+  radarGenre=g;
+  buildRadarBtns();
+  drawRadar(g);
+}
+
+function drawRadar(g,containerId='radar-svg'){
+  const p=GENRE_PROFILES[g];
+  if(!p)return;
+  const svg=document.getElementById(containerId);
+  if(!svg)return;
+  const isSmall=containerId==='dna-radar';
+  const W=isSmall?200:300,H=isSmall?200:300;
+  const cx=W/2,cy=H/2,R=isSmall?70:110;
+  const keys=['d','e','s','a','i','v'];
+  const labels=['Dance','Energy','Speech','Acoustic','Instrum.','Valence'];
+  const N=keys.length;
+  const c=GENRE_COLORS[g]||'var(--green)';
+
+  let html='';
+  // Grid rings
+  [0.25,0.5,0.75,1].forEach(r=>{
+    const pts=keys.map((_,i)=>{
+      const angle=(Math.PI*2*i/N)-Math.PI/2;
+      return [cx+Math.cos(angle)*R*r,cy+Math.sin(angle)*R*r].join(',');
+    }).join(' ');
+    html+=`<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+  });
+  // Spokes
+  keys.forEach((_,i)=>{
+    const angle=(Math.PI*2*i/N)-Math.PI/2;
+    html+=`<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(angle)*R}" y2="${cy+Math.sin(angle)*R}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+  });
+  // Data polygon
+  const dataPts=keys.map((k,i)=>{
+    const val=p[k]||0;
+    const angle=(Math.PI*2*i/N)-Math.PI/2;
+    return [cx+Math.cos(angle)*R*val,cy+Math.sin(angle)*R*val].join(',');
+  }).join(' ');
+  html+=`<polygon points="${dataPts}" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="2"/>`;
+  // Data dots
+  keys.forEach((k,i)=>{
+    const val=p[k]||0;
+    const angle=(Math.PI*2*i/N)-Math.PI/2;
+    const x=cx+Math.cos(angle)*R*val,y=cy+Math.sin(angle)*R*val;
+    html+=`<circle cx="${x}" cy="${y}" r="4" fill="${c}" opacity="0.9"/>`;
+  });
+  // Labels (not for small)
+  if(!isSmall){
+    keys.forEach((_,i)=>{
+      const angle=(Math.PI*2*i/N)-Math.PI/2;
+      const x=cx+Math.cos(angle)*(R+22),y=cy+Math.sin(angle)*(R+22);
+      html+=`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#555" font-family="DM Mono,monospace">${labels[i]}</text>`;
+    });
+    // Genre label
+    html+=`<text x="${cx}" y="${cy+R+38}" text-anchor="middle" font-size="13" fill="${c}" font-family="Bebas Neue,sans-serif" letter-spacing="0.1em">${g.toUpperCase()}</text>`;
+  }
+  svg.innerHTML=html;
+
+  // Description
+  const desc=document.getElementById('radar-description');
+  if(desc&&p.desc){
+    desc.innerHTML=`<div style="color:${c};font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.1em;margin-bottom:0.5rem">${g.toUpperCase()}</div>
+    <p>${p.desc}</p>
+    <div style="margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem">
+      ${keys.map((k,i)=>`
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.72rem">
+          <span style="color:var(--muted);min-width:70px;font-family:'DM Mono',monospace">${labels[i]}</span>
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
+            <div style="width:${(p[k]||0)*100}%;height:100%;background:${c};opacity:0.7;border-radius:2px"></div>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:${c};min-width:28px;text-align:right">${((p[k]||0)*100).toFixed(0)}%</span>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+}
+
+/* ─────────────────────────────────────────
+   TRAIN TAB
+───────────────────────────────────────── */
+let selectedModelId='rf';
+const MODEL_CONFIGS={
+  rf:{
+    params:[
+      {label:'n_estimators (# trees)',id:'n_est',type:'range',min:10,max:500,val:100,step:10},
+      {label:'max_depth',id:'max_d',type:'range',min:2,max:30,val:10,step:1},
+      {label:'min_samples_leaf',id:'min_sl',type:'range',min:1,max:20,val:2,step:1},
+    ],
+    metrics:{acc:'78.4%',prec:'76.2%',rec:'74.8%',f1:'0.755',train:'91.2%',val:'78.4%'},
+    perClass:[
+      {g:'classical',f1:0.97,c:'#88ccff'},
+      {g:'metal',f1:0.91,c:'#ff4444'},
+      {g:'edm',f1:0.89,c:'#00ff88'},
+      {g:'hip-hop',f1:0.86,c:'#ffe600'},
+      {g:'ambient',f1:0.84,c:'#00d4ff'},
+      {g:'pop',f1:0.78,c:'#ff006e'},
+      {g:'rock',f1:0.73,c:'#ff7b00'},
+      {g:'jazz',f1:0.71,c:'#aaffdd'},
+      {g:'k-pop',f1:0.68,c:'#ff88cc'},
+      {g:'folk',f1:0.62,c:'#99ff88'},
+    ],
+    logLines:[
+      {t:300,c:'t-info',s:'[INFO] Loading 91,200 training samples...'},
+      {t:700,c:'t-ok',s:'[OK] Dataset loaded. 26 genre classes. No nulls.'},
+      {t:1200,c:'t-info',s:'[INFO] StandardScaler fitted on training set.'},
+      {t:1700,c:'t-ok',s:'[OK] Features scaled. Fitting Random Forest (100 trees)...'},
+      {t:2400,c:'t-warn',s:'[TREE 25/100] avg depth=9.2, leaf nodes=1847'},
+      {t:3000,c:'t-warn',s:'[TREE 50/100] OOB score: 0.741'},
+      {t:3600,c:'t-warn',s:'[TREE 75/100] OOB score: 0.768'},
+      {t:4200,c:'t-ok',s:'[TREE 100/100] OOB score: 0.779'},
+      {t:4700,c:'t-info',s:'[INFO] Running 5-fold cross-validation...'},
+      {t:5200,c:'t-ok',s:'[CV] Fold 1: val_acc=0.779 | Fold 2: val_acc=0.786'},
+      {t:5700,c:'t-ok',s:'[CV] Fold 3: val_acc=0.782 | Fold 4: val_acc=0.791'},
+      {t:6000,c:'t-ok',s:'[CV] Fold 5: val_acc=0.775'},
+      {t:6300,c:'t-em',s:'[RESULT] Mean CV Accuracy: 0.784 ± 0.006'},
+      {t:6500,c:'t-em',s:'[RESULT] Test Accuracy: 78.4% | F1 Macro: 0.755'},
+    ],
+  },
+  xgb:{
+    params:[
+      {label:'n_estimators',id:'n_est',type:'range',min:50,max:1000,val:300,step:50},
+      {label:'learning_rate',id:'lr',type:'range',min:1,max:30,val:10,step:1,scale:0.01},
+      {label:'max_depth',id:'max_d',type:'range',min:2,max:12,val:6,step:1},
+    ],
+    metrics:{acc:'82.1%',prec:'80.5%',rec:'79.3%',f1:'0.799',train:'93.8%',val:'82.1%'},
+    perClass:[
+      {g:'classical',f1:0.98,c:'#88ccff'},
+      {g:'metal',f1:0.94,c:'#ff4444'},
+      {g:'edm',f1:0.92,c:'#00ff88'},
+      {g:'hip-hop',f1:0.90,c:'#ffe600'},
+      {g:'ambient',f1:0.88,c:'#00d4ff'},
+      {g:'pop',f1:0.83,c:'#ff006e'},
+      {g:'rock',f1:0.79,c:'#ff7b00'},
+      {g:'jazz',f1:0.76,c:'#aaffdd'},
+      {g:'k-pop',f1:0.73,c:'#ff88cc'},
+      {g:'folk',f1:0.68,c:'#99ff88'},
+    ],
+    logLines:[
+      {t:300,c:'t-info',s:'[XGB] Initializing gradient boosting...'},
+      {t:600,c:'t-info',s:'[XGB] softmax objective (multiclass=26)'},
+      {t:1200,c:'t-warn',s:'[Round 50] train_mlogloss=1.823 | val=1.961'},
+      {t:2000,c:'t-warn',s:'[Round 100] train_mlogloss=1.441 | val=1.623'},
+      {t:2800,c:'t-warn',s:'[Round 200] train_mlogloss=0.992 | val=1.188'},
+      {t:3600,c:'t-warn',s:'[Round 250] train_mlogloss=0.841 | val=1.089 ← best'},
+      {t:4400,c:'t-warn',s:'[Round 300] train_mlogloss=0.729 | val=1.102 (overfit?)'},
+      {t:5000,c:'t-ok',s:'[EARLY STOP] Best round=250, restoring best weights'},
+      {t:5500,c:'t-ok',s:'[CV] Mean 5-fold acc=0.821 ± 0.004'},
+      {t:6000,c:'t-em',s:'[RESULT] Test Accuracy: 82.1% | F1 Macro: 0.799'},
+    ],
+  },
+  knn:{
+    params:[
+      {label:'n_neighbors (K)',id:'k',type:'range',min:1,max:50,val:7,step:2},
+      {label:'weight function',id:'wgt',type:'select',opts:['uniform','distance']},
+      {label:'metric',id:'metric',type:'select',opts:['euclidean','manhattan','minkowski']},
+    ],
+    metrics:{acc:'71.2%',prec:'69.4%',rec:'68.1%',f1:'0.687',train:'78.3%',val:'71.2%'},
+    perClass:[
+      {g:'classical',f1:0.95,c:'#88ccff'},
+      {g:'metal',f1:0.88,c:'#ff4444'},
+      {g:'edm',f1:0.84,c:'#00ff88'},
+      {g:'hip-hop',f1:0.78,c:'#ffe600'},
+      {g:'ambient',f1:0.76,c:'#00d4ff'},
+      {g:'pop',f1:0.68,c:'#ff006e'},
+      {g:'rock',f1:0.62,c:'#ff7b00'},
+      {g:'jazz',f1:0.60,c:'#aaffdd'},
+      {g:'k-pop',f1:0.55,c:'#ff88cc'},
+      {g:'folk',f1:0.48,c:'#99ff88'},
+    ],
+    logLines:[
+      {t:200,c:'t-info',s:'[KNN] Building KD-tree index... (k=7, metric=euclidean)'},
+      {t:800,c:'t-ok',s:'[KNN] Tree built. 91,200 vectors indexed.'},
+      {t:1400,c:'t-info',s:'[KNN] No training needed — lazy learner!'},
+      {t:1800,c:'t-warn',s:'[KNN] Inference on 22,800 test samples...'},
+      {t:2400,c:'t-warn',s:'[KNN] Querying 7-NN for batch 1/10... (slow!)'},
+      {t:3200,c:'t-warn',s:'[KNN] Distance matrix: ~1.96GB RAM usage'},
+      {t:4000,c:'t-ok',s:'[KNN] All test predictions complete.'},
+      {t:4400,c:'t-ok',s:'[CV] Mean 5-fold acc=0.712 ± 0.009'},
+      {t:4700,c:'t-em',s:'[RESULT] Test Accuracy: 71.2% | F1 Macro: 0.687'},
+      {t:5000,c:'t-warn',s:'[NOTE] KNN is O(n) inference — not production-ready for 114K track corpus'},
+    ],
+  },
+};
+
+function selectModel(el,id){
+  document.querySelectorAll('.model-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedModelId=id;
+  renderHyperparams();
+}
+
+function renderHyperparams(){
+  const cfg=MODEL_CONFIGS[selectedModelId];
+  const el=document.getElementById('hyperparam-panel');
+  if(!el)return;
+  el.innerHTML=cfg.params.map(p=>{
+    if(p.type==='range'){
+      const dispVal=p.scale?((p.val*p.scale).toFixed(2)):p.val;
+      return `<div style="margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--dim)">${p.label}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--green)" id="hv-${p.id}">${dispVal}</span>
+        </div>
+        <input type="range" class="styled" min="${p.min}" max="${p.max}" value="${p.val}" step="${p.step}"
+          style="--fill:${((p.val-p.min)/(p.max-p.min)*100).toFixed(1)}%"
+          oninput="updateHParam(this,'${p.id}',${p.scale||1})">
+      </div>`;
+    }
+    if(p.type==='select'){
+      return `<div style="margin-bottom:1rem">
+        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--dim);margin-bottom:0.3rem">${p.label}</div>
+        <select style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:0.4rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.72rem;width:100%">
+          ${p.opts.map(o=>`<option>${o}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+    return '';
+  }).join('');
+}
+
+function updateHParam(el,id,scale){
+  const v=scale!==1?(el.value*scale).toFixed(2):el.value;
+  document.getElementById('hv-'+id).textContent=v;
+  const pct=((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%';
+  el.style.setProperty('--fill',pct);
+}
+
+function startTraining(){
+  const btn=document.getElementById('train-btn');
+  const track=document.getElementById('prog-track');
+  const fill=document.getElementById('prog-fill');
+  const terminal=document.getElementById('train-terminal');
+  const results=document.getElementById('results-panel');
+
+  btn.disabled=true;btn.textContent='⏳ TRAINING...';
+  track.style.display='block';terminal.style.display='block';
+  terminal.innerHTML='';
+
+  const cfg=MODEL_CONFIGS[selectedModelId];
+  cfg.logLines.forEach(({t,c,s})=>{
+    setTimeout(()=>{
+      terminal.innerHTML+=`<span class="${c}">${s}</span>\n`;
+      terminal.scrollTop=terminal.scrollHeight;
+      const pct=Math.min(((t+800)/7500)*100,98);
+      fill.style.width=pct+'%';
+    },t);
+  });
+
+  const totalTime=cfg.logLines[cfg.logLines.length-1].t+600;
+  setTimeout(()=>{
+    fill.style.width='100%';
+    btn.disabled=false;btn.textContent='▶ RE-TRAIN';
+    results.style.opacity='1';results.style.filter='none';results.style.pointerEvents='all';
+    const m=cfg.metrics;
+    document.getElementById('m-acc').textContent=m.acc;
+    document.getElementById('m-prec').textContent=m.prec;
+    document.getElementById('m-rec').textContent=m.rec;
+    document.getElementById('m-f1').textContent=m.f1;
+    document.getElementById('m-train').textContent=m.train;
+    document.getElementById('m-val').textContent=m.val;
+    const gap=(parseFloat(m.train)-parseFloat(m.val)).toFixed(1)+'%';
+    document.getElementById('m-gap').textContent=gap;
+    const gapN=parseFloat(gap);
+    document.getElementById('overfit-msg').textContent=
+      gapN>15?`Gap of ${gap} indicates significant overfitting. Reduce model complexity: lower max_depth or increase min_samples_leaf.`:
+      gapN>8?`Gap of ${gap} is moderate. Some overfitting present. Consider regularization or more training data.`:
+      `Gap of ${gap} is healthy. Model generalizes well to unseen data.`;
+    renderCM();
+    renderPerClass(cfg.perClass);
+  },totalTime);
+}
+
+function renderCM(){
+  const moodLabels=['EUPHORIC','CHILL','CONFIDENT','MELANCHOLIC','INTENSE'];
+  const m=MODEL_CONFIGS[selectedModelId];
+  const diag=m.metrics.acc;
+  const el=document.getElementById('cm-grid');
+  let html=`<div class="cm-cell cm-header"></div>`;
+  moodLabels.forEach(l=>html+=`<div class="cm-cell cm-header" style="font-size:0.5rem">${l.slice(0,6)}</div>`);
+  moodLabels.forEach((r,ri)=>{
+    html+=`<div class="cm-cell cm-header" style="font-size:0.5rem">${r.slice(0,6)}</div>`;
+    moodLabels.forEach((c,ci)=>{
+      const isD=ri===ci;
+      const val=isD?Math.floor(75+Math.random()*18):Math.floor(Math.random()*12);
+      const cls=isD?'cm-high':val>6?'cm-mid':'cm-low';
+      html+=`<div class="cm-cell ${cls}">${val}</div>`;
+    });
+  });
+  el.innerHTML=html;
+}
+
+function renderPerClass(data){
+  const el=document.getElementById('per-class-chart');
+  el.innerHTML=data.map(d=>`
+    <div class="bar-row">
+      <div class="bar-lbl" style="color:var(--dim)">${d.g}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${d.f1*100}%;background:${d.c}"></div></div>
+      <div class="bar-val" style="color:${d.c}">${d.f1.toFixed(2)}</div>
+    </div>
+  `).join('');
+}
+
+/* ─────────────────────────────────────────
+   PREDICT TAB
+───────────────────────────────────────── */
+const SLIDER_DEFS=[
+  {key:'danceability',label:'Danceability',min:0,max:1,step:0.01,val:0.65,color:'#ff006e'},
+  {key:'energy',      label:'Energy',      min:0,max:1,step:0.01,val:0.70,color:'#ff7b00'},
+  {key:'valence',     label:'Valence',     min:0,max:1,step:0.01,val:0.55,color:'#ffe600'},
+  {key:'acousticness',label:'Acousticness',min:0,max:1,step:0.01,val:0.15,color:'#00ff88'},
+  {key:'speechiness', label:'Speechiness', min:0,max:1,step:0.01,val:0.07,color:'#00d4ff'},
+  {key:'instrumentalness',label:'Instrumentalness',min:0,max:1,step:0.01,val:0.01,color:'#b44dff'},
+  {key:'liveness',    label:'Liveness',    min:0,max:1,step:0.01,val:0.12,color:'#ff7b9c'},
+  {key:'loudness',    label:'Loudness (normalized)',min:0,max:1,step:0.01,val:0.75,color:'#aaffdd'},
+];
+let sliderVals={};
+let tempoVal=120;
+let keyVal=0;
+
+SLIDER_DEFS.forEach(s=>sliderVals[s.key]=s.val);
+
+function renderSliders(){
+  const el=document.getElementById('slider-panel');
+  el.innerHTML=SLIDER_DEFS.map(s=>`
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">${s.label.toUpperCase()}</span>
+        <span class="slider-value" id="sv-${s.key}">${s.val.toFixed(2)}</span>
+      </div>
+      <input type="range" class="styled" id="sl-${s.key}"
+        min="${s.min}" max="${s.max}" step="${s.step}" value="${s.val}"
+        style="--fill:${(s.val/(s.max-s.min)*100).toFixed(1)}%"
+        oninput="onSlider('${s.key}',this)">
+    </div>
+  `).join('');
+}
+
+function onSlider(key,el){
+  sliderVals[key]=parseFloat(el.value);
+  document.getElementById('sv-'+key).textContent=parseFloat(el.value).toFixed(2);
+  const pct=((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%';
+  el.style.setProperty('--fill',pct);
+  livePredict();
+}
+
+function renderTempoChips(){
+  const tempos=[60,80,90,100,110,120,128,140,150,170,190];
+  const el=document.getElementById('tempo-chips');
+  el.innerHTML=tempos.map(t=>`
+    <div class="tempo-chip ${t===tempoVal?'on':''}" onclick="setTempo(${t})">${t} BPM</div>
+  `).join('');
+}
+
+function setTempo(t){
+  tempoVal=t;
+  renderTempoChips();
+  livePredict();
+}
+
+const KEYS=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+function renderKeyChips(){
+  const el=document.getElementById('key-chips');
+  el.innerHTML=KEYS.map((k,i)=>`
+    <div class="key-chip ${i===keyVal?'on':''}" onclick="setKey(${i})">${k}</div>
+  `).join('');
+}
+function setKey(i){keyVal=i;renderKeyChips();livePredict();}
+
+function renderPresetSongs(){
+  const presets=[
+    {label:'🕺 Club Banger',  d:0.88,e:0.92,v:0.85,a:0.01,s:0.04,i:0.05,li:0.08,lo:0.90,t:128,k:0},
+    {label:'😢 Sad Ballad',   d:0.25,e:0.18,v:0.12,a:0.82,s:0.04,i:0.02,li:0.10,lo:0.35,t:72,k:5},
+    {label:'🎤 Hip-Hop Flow', d:0.82,e:0.62,v:0.58,a:0.05,s:0.30,i:0.00,li:0.09,lo:0.80,t:92,k:7},
+    {label:'🎸 Rock Anthem',  d:0.48,e:0.90,v:0.45,a:0.02,s:0.05,i:0.01,li:0.14,lo:0.88,t:148,k:4},
+    {label:'🎹 Piano Solo',   d:0.22,e:0.08,v:0.14,a:0.98,s:0.04,i:0.97,li:0.09,lo:0.20,t:58,k:2},
+    {label:'🌊 Ambient Wave', d:0.32,e:0.20,v:0.40,a:0.60,s:0.03,i:0.80,li:0.07,lo:0.30,t:80,k:9},
+    {label:'🔥 Metal Riff',   d:0.35,e:0.95,v:0.18,a:0.02,s:0.06,i:0.04,li:0.15,lo:0.92,t:162,k:1},
+    {label:'🎷 Jazz Improv',  d:0.50,e:0.38,v:0.62,a:0.75,s:0.06,i:0.32,li:0.20,lo:0.55,t:108,k:8},
+  ];
+  const el=document.getElementById('preset-songs');
+  el.innerHTML=presets.map((p,i)=>`
+    <button onclick="loadPreset(${i})" style="padding:0.4rem 0.9rem;background:var(--card2);border:1px solid var(--border);border-radius:5px;font-size:0.75rem;color:var(--dim);cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif" onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--dim)'">${p.label}</button>
+  `).join('');
+  window._presets=presets;
+}
+
+function loadPreset(i){
+  const p=window._presets[i];
+  const keys=['danceability','energy','valence','acousticness','speechiness','instrumentalness','liveness','loudness'];
+  const vals=[p.d,p.e,p.v,p.a,p.s,p.i,p.li,p.lo];
+  keys.forEach((k,j)=>{
+    sliderVals[k]=vals[j];
+    const el=document.getElementById('sl-'+k);
+    if(el){
+      el.value=vals[j];
+      document.getElementById('sv-'+k).textContent=vals[j].toFixed(2);
+      const def=SLIDER_DEFS.find(s=>s.key===k);
+      const pct=((vals[j]-def.min)/(def.max-def.min)*100).toFixed(1)+'%';
+      el.style.setProperty('--fill',pct);
+    }
+  });
+  tempoVal=p.t;keyVal=p.k;
+  renderTempoChips();renderKeyChips();
+  livePredict();
+}
+
+/* ─── PREDICTION ENGINE ─── */
+function computeGenreScores(sv){
+  // Approximate RF decision logic based on feature profiles
+  const genres=[
+    {g:'edm',       base:()=>sv.energy*0.35+sv.danceability*0.30+(1-sv.acousticness)*0.20+sv.loudness*0.15},
+    {g:'hip-hop',   base:()=>sv.danceability*0.30+sv.speechiness*0.35+sv.energy*0.20+(1-sv.instrumentalness)*0.15},
+    {g:'classical', base:()=>sv.acousticness*0.40+sv.instrumentalness*0.35+(1-sv.energy)*0.15+(1-sv.danceability)*0.10},
+    {g:'rock',      base:()=>sv.energy*0.40+(1-sv.acousticness)*0.25+sv.loudness*0.20+(1-sv.instrumentalness)*0.15},
+    {g:'pop',       base:()=>sv.danceability*0.30+(1-sv.instrumentalness)*0.25+sv.valence*0.25+sv.energy*0.20},
+    {g:'jazz',      base:()=>sv.acousticness*0.30+(0.5-Math.abs(sv.energy-0.35))*0.25+sv.instrumentalness*0.25+sv.liveness*0.20},
+    {g:'metal',     base:()=>sv.energy*0.45+sv.loudness*0.30+(1-sv.valence)*0.15+(1-sv.acousticness)*0.10},
+    {g:'ambient',   base:()=>sv.instrumentalness*0.35+(1-sv.energy)*0.30+sv.acousticness*0.25+(1-sv.danceability)*0.10},
+    {g:'r-n-b',     base:()=>sv.danceability*0.30+sv.valence*0.25+sv.energy*0.25+(1-sv.acousticness)*0.20},
+    {g:'folk',      base:()=>sv.acousticness*0.40+(1-sv.energy)*0.25+(1-sv.danceability)*0.20+(1-sv.instrumentalness)*0.15},
+    {g:'k-pop',     base:()=>sv.danceability*0.35+sv.valence*0.30+sv.energy*0.25+sv.loudness*0.10},
+    {g:'alternative',base:()=>sv.energy*0.30+(1-sv.acousticness)*0.25+(1-sv.valence)*0.25+sv.liveness*0.20},
+  ];
+  const raw=genres.map(({g,base})=>({g,s:Math.max(0.01,base()+Math.random()*0.04-0.02)}));
+  const total=raw.reduce((a,r)=>a+r.s,0);
+  return raw.map(r=>({...r,p:r.s/total})).sort((a,b)=>b.p-a.p);
+}
+
+function getMood(sv){
+  if(sv.energy>0.75&&sv.danceability>0.70) return MOOD_CLUSTERS[0]; // EUPHORIC
+  if(sv.energy<0.35&&sv.instrumentalness>0.4) return MOOD_CLUSTERS[1]; // CHILL
+  if(sv.speechiness>0.15&&sv.danceability>0.65) return MOOD_CLUSTERS[2]; // CONFIDENT
+  if(sv.energy<0.35&&sv.valence<0.35) return MOOD_CLUSTERS[3]; // MELANCHOLIC
+  return MOOD_CLUSTERS[4]; // INTENSE
+}
+
+const SIMILAR_SONGS=[
+  {title:'Sandstorm',artist:'Darude',genre:'edm',emoji:'🔊'},
+  {title:'HUMBLE.',artist:'Kendrick',genre:'hip-hop',emoji:'🎤'},
+  {title:'Clair de Lune',artist:'Debussy',genre:'classical',emoji:'🎹'},
+  {title:'Smells Like Teen Spirit',artist:'Nirvana',genre:'rock',emoji:'🎸'},
+  {title:'Dynamite',artist:'BTS',genre:'k-pop',emoji:'💃'},
+  {title:'Take Five',artist:'Dave Brubeck',genre:'jazz',emoji:'🎷'},
+  {title:'Strobe',artist:'deadmau5',genre:'electronic',emoji:'⚡'},
+  {title:'Nothing Else Matters',artist:'Metallica',genre:'metal',emoji:'🔥'},
+  {title:'Comptine d\'un autre été',artist:'Yann Tiersen',genre:'classical',emoji:'🎵'},
+  {title:'One Dance',artist:'Drake',genre:'r-n-b',emoji:'🎵'},
+  {title:'Pink + White',artist:'Frank Ocean',genre:'r-n-b',emoji:'🌊'},
+  {title:'Black',artist:'Pearl Jam',genre:'rock',emoji:'🎸'},
+];
+
+let predictedGenre='';
+function livePredict(){
+  buildMiniWave();
+  const sv=sliderVals;
+  const scores=computeGenreScores(sv);
+  const mood=getMood(sv);
+  const topGenre=scores[0].g;
+  predictedGenre=topGenre;
+
+  // Mood display
+  const md=document.getElementById('mood-display');
+  md.style.background=mood.bg;
+  md.style.borderColor=mood.color+'44';
+  document.getElementById('mood-emoji').textContent=mood.emoji;
+  const mn=document.getElementById('mood-name');
+  mn.textContent=mood.name;mn.style.color=mood.color;
+  document.getElementById('mood-sub').textContent=mood.desc;
+
+  // Genre bars (top 8)
+  const gbar=document.getElementById('genre-pred-bars');
+  gbar.innerHTML=scores.slice(0,8).map((s,i)=>{
+    const c=GENRE_COLORS[s.g]||'#888';
+    const pct=(s.p*100).toFixed(1);
+    return `<div class="genre-pred-row">
+      <div class="gpred-name" style="${i===0?'color:#fff;font-weight:600':''}">${s.g}</div>
+      <div class="gpred-track">
+        <div class="gpred-fill" style="width:${pct}%;background:${c}${i===0?'':'88'}">
+          ${parseFloat(pct)>8?`<span>${pct}%</span>`:''}
+        </div>
+      </div>
+      <div class="gpred-pct" style="color:${i===0?c:'var(--muted)'}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // SHAP
+  const shap=[
+    {name:'energy',   val:sv.energy,   contrib:(sv.energy-0.5)*0.35},
+    {name:'danceability',val:sv.danceability,contrib:(sv.danceability-0.5)*0.28},
+    {name:'acousticness',val:sv.acousticness,contrib:(sv.acousticness-0.5)*-0.22},
+    {name:'speechiness',val:sv.speechiness,contrib:(sv.speechiness-0.15)*0.40},
+    {name:'instrumentalness',val:sv.instrumentalness,contrib:(sv.instrumentalness-0.1)*0.25},
+    {name:'valence',  val:sv.valence,  contrib:(sv.valence-0.5)*0.12},
+  ].sort((a,b)=>Math.abs(b.contrib)-Math.abs(a.contrib));
+
+  document.getElementById('shap-chart').innerHTML=shap.map(s=>{
+    const pos=s.contrib>0;
+    const c=pos?'var(--green)':'var(--pink)';
+    const pct=Math.abs(s.contrib)*200;
+    return `<div class="shap-row">
+      <div class="shap-name">${s.name}</div>
+      <div class="shap-track"><div class="shap-bar" style="width:${Math.min(pct,100)}%;background:${c};opacity:0.75"></div></div>
+      <div class="shap-val" style="color:${c}">${pos?'+':''}${(s.contrib*100).toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+
+  // Similar songs
+  const genreMatch=SIMILAR_SONGS.filter(s=>s.genre===topGenre||s.genre===scores[1].g).slice(0,3);
+  document.getElementById('similar-songs').innerHTML=(genreMatch.length?genreMatch:SIMILAR_SONGS.slice(0,3)).map(s=>`
+    <div class="song-row">
+      <div class="song-art" style="background:${GENRE_COLORS[s.genre]||'#333'}22">${s.emoji}</div>
+      <div>
+        <div class="song-title">${s.title}</div>
+        <div class="song-artist">${s.artist}</div>
+      </div>
+      <div class="song-genre" style="background:${GENRE_COLORS[s.genre]||'#333'}22;color:${GENRE_COLORS[s.genre]||'#888'}">${s.genre}</div>
+    </div>
+  `).join('');
+
+  // DNA Radar
+  const radarData={
+    d:sv.danceability, e:sv.energy, s:sv.speechiness,
+    a:sv.acousticness, i:sv.instrumentalness, v:sv.valence,
+    desc:'', desc2:''
+  };
+  drawRadarDynamic(radarData, GENRE_COLORS[topGenre]||'#00ff88');
+}
+
+function drawRadarDynamic(p,c){
+  const svg=document.getElementById('dna-radar');
+  if(!svg)return;
+  const W=200,H=200,cx=100,cy=100,R=70;
+  const keys=['d','e','s','a','i','v'];
+  const N=keys.length;
+  let html='';
+  [0.25,0.5,0.75,1].forEach(r=>{
+    const pts=keys.map((_,i)=>{const a=(Math.PI*2*i/N)-Math.PI/2;return [cx+Math.cos(a)*R*r,cy+Math.sin(a)*R*r].join(',');}).join(' ');
+    html+=`<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+  });
+  keys.forEach((_,i)=>{const a=(Math.PI*2*i/N)-Math.PI/2;html+=`<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(a)*R}" y2="${cy+Math.sin(a)*R}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;});
+  const dataPts=keys.map((k,i)=>{const v=p[k]||0;const a=(Math.PI*2*i/N)-Math.PI/2;return [cx+Math.cos(a)*R*v,cy+Math.sin(a)*R*v].join(',');}).join(' ');
+  html+=`<polygon points="${dataPts}" fill="${c}" fill-opacity="0.18" stroke="${c}" stroke-width="2"/>`;
+  keys.forEach((k,i)=>{const v=p[k]||0;const a=(Math.PI*2*i/N)-Math.PI/2;const x=cx+Math.cos(a)*R*v,y=cy+Math.sin(a)*R*v;html+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${c}" opacity="0.9"/>`;});
+  const lbs=['D','E','Sp','Ac','In','V'];
+  keys.forEach((_,i)=>{const a=(Math.PI*2*i/N)-Math.PI/2;const x=cx+Math.cos(a)*(R+14),y=cy+Math.sin(a)*(R+14);html+=`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#444" font-family="DM Mono,monospace">${lbs[i]}</text>`;});
+  svg.innerHTML=html;
+}
+
+/* ─────────────────────────────────────────
+   PIPELINE TAB
+───────────────────────────────────────── */
+const PIPELINE_STEPS=[
+  {num:'01',title:'Data Acquisition via Spotify API',
+   prev:'Pull audio features for 114K tracks using spotipy + Spotify Developer API',
+   body:`The Spotify Web API returns a JSON object for any track with all 12 audio features. We batch-fetched 114,000 tracks using the <code>sp.audio_features()</code> endpoint, respecting rate limits (100 tracks/request, 10 req/sec).`,
+   code:`<span class="kw">import</span> spotipy
+<span class="kw">from</span> spotipy.oauth2 <span class="kw">import</span> SpotifyClientCredentials
+
+sp = spotipy.<span class="fn">Spotify</span>(auth_manager=<span class="fn">SpotifyClientCredentials</span>(
+  client_id=<span class="st">"YOUR_CLIENT_ID"</span>,
+  client_secret=<span class="st">"YOUR_CLIENT_SECRET"</span>
+))
+
+<span class="cm"># Get audio features for a batch of track IDs</span>
+features = sp.<span class="fn">audio_features</span>(track_ids)
+<span class="cm"># Returns: danceability, energy, key, loudness, mode,</span>
+<span class="cm"># speechiness, acousticness, instrumentalness,</span>
+<span class="cm"># liveness, valence, tempo, duration_ms</span>`},
+  {num:'02',title:'EDA — Exploratory Data Analysis',
+   prev:'Visualize distributions, correlations, class imbalance before any modeling',
+   body:'Before writing a single line of model code, we explore. Check distributions (are features skewed?), correlations (are features redundant?), and class balance (26 genres — are they equal-sized?).',
+   code:`<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> seaborn <span class="kw">as</span> sns
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+df = pd.<span class="fn">read_csv</span>(<span class="st">'spotify_tracks.csv'</span>)
+print(df.<span class="fn">describe</span>())  <span class="cm"># distribution stats</span>
+
+<span class="cm"># Correlation heatmap</span>
+corr = df[FEATURE_COLS].<span class="fn">corr</span>()
+sns.<span class="fn">heatmap</span>(corr, annot=True, cmap=<span class="st">'coolwarm'</span>)
+
+<span class="cm"># Class imbalance check</span>
+df[<span class="st">'track_genre'</span>].<span class="fn">value_counts</span>().<span class="fn">plot</span>(kind=<span class="st">'bar'</span>)
+<span class="cm"># Electronic: 5600, Folk: 2100 → imbalanced!</span>`},
+  {num:'03',title:'Preprocessing — Scaling + Encoding',
+   prev:'StandardScaler for numerical features, LabelEncoder for 26 genre classes',
+   body:'All features are already numeric (0–1) except loudness (-60 to 0 dB) and tempo (60–200 BPM). We use StandardScaler to normalize these. Genres are label-encoded to integers 0–25.',
+   code:`<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler, LabelEncoder
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+
+<span class="cm"># Scale all features</span>
+scaler = <span class="fn">StandardScaler</span>()
+X = scaler.<span class="fn">fit_transform</span>(df[FEATURE_COLS])
+
+<span class="cm"># Encode 26 genre classes → integers</span>
+le = <span class="fn">LabelEncoder</span>()
+y = le.<span class="fn">fit_transform</span>(df[<span class="st">'track_genre'</span>])
+
+<span class="cm"># Stratified split preserves class ratios</span>
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
+  X, y, test_size=<span class="nb">0.2</span>, stratify=y, random_state=<span class="nb">42</span>
+)</span>
+<span class="cm"># → 91,200 train, 22,800 test</span>`},
+  {num:'04',title:'Model Training — Random Forest',
+   prev:'Fit 100 decision trees, each on a random data+feature subset (bagging)',
+   body:'Random Forest is ideal for this dataset: no scaling needed (trees are scale-invariant), handles 26 classes natively, and provides built-in feature importance. We use GridSearchCV to tune hyperparameters.',
+   code:`<span class="kw">from</span> sklearn.ensemble <span class="kw">import</span> RandomForestClassifier
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> GridSearchCV
+
+param_grid = {
+  <span class="st">'n_estimators'</span>: [100, 200],
+  <span class="st">'max_depth'</span>: [8, 12, None],
+  <span class="st">'min_samples_leaf'</span>: [1, 2, 5]
+}
+cv = <span class="fn">GridSearchCV</span>(
+  <span class="fn">RandomForestClassifier</span>(random_state=<span class="nb">42</span>),
+  param_grid, cv=<span class="nb">5</span>, scoring=<span class="st">'accuracy'</span>, n_jobs=-<span class="nb">1</span>
+)
+cv.<span class="fn">fit</span>(X_train, y_train)
+print(cv.best_params_)
+<span class="cm"># {'max_depth': 12, 'min_samples_leaf': 2, 'n_estimators': 200}</span>`},
+  {num:'05',title:'Evaluation — Multi-Class Metrics',
+   prev:'Accuracy, F1-Macro, Confusion Matrix, Per-Class Report',
+   body:'With 26 classes, accuracy alone is misleading. We use F1-Macro (averages F1 per class, treating all genres equally). The confusion matrix shows genre-level error patterns: Rock vs Alternative is the most confused pair.',
+   code:`<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> (
+  classification_report, confusion_matrix, ConfusionMatrixDisplay
+)
+
+y_pred = best_model.<span class="fn">predict</span>(X_test)
+
+<span class="cm"># Full per-class breakdown</span>
+print(<span class="fn">classification_report</span>(
+  y_test, y_pred, target_names=le.classes_
+))
+<span class="cm"># Classical F1: 0.97 ← easiest (acoustic+instrumental)</span>
+<span class="cm"># Folk F1: 0.62 ← hardest (overlaps with acoustic/country)</span>
+
+<span class="cm"># Confusion matrix heatmap</span>
+cm = <span class="fn">confusion_matrix</span>(y_test, y_pred)
+<span class="fn">ConfusionMatrixDisplay</span>(cm).<span class="fn">plot</span>(cmap=<span class="st">'Blues'</span>)`},
+  {num:'06',title:'Feature Importance + SHAP Explainability',
+   prev:'Why does the model predict a genre? Feature importance + SHAP values',
+   body:'Random Forest gives built-in feature importance (Gini decrease). For per-prediction explanations, we use SHAP (TreeExplainer is fast for RF). This shows students exactly why "energy=0.92" pushed the model toward Metal.',
+   code:`<span class="kw">import</span> shap
+
+explainer = shap.<span class="fn">TreeExplainer</span>(best_model)
+shap_values = explainer.<span class="fn">shap_values</span>(X_test[:100])
+
+<span class="cm"># Global importance</span>
+shap.<span class="fn">summary_plot</span>(shap_values, X_test[:100],
+  feature_names=FEATURE_COLS)
+
+<span class="cm"># Single prediction explanation</span>
+shap.<span class="fn">force_plot</span>(
+  explainer.expected_value[class_idx],
+  shap_values[class_idx][0],
+  X_test[0], feature_names=FEATURE_COLS
+)
+<span class="cm"># → "energy=0.92 pushed METAL confidence +0.31"</span>`},
+  {num:'07',title:'Model Export + Production Serving',
+   prev:'Pickle the model + scaler, serve via FastAPI endpoint',
+   body:'A trained model is useless without deployment. We serialize with joblib, wrap in a FastAPI endpoint that accepts 12 audio features and returns genre probabilities + SHAP values in <50ms.',
+   code:`<span class="kw">import</span> joblib
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+<span class="cm"># Save model + scaler</span>
+joblib.<span class="fn">dump</span>(best_model, <span class="st">'genre_classifier.pkl'</span>)
+joblib.<span class="fn">dump</span>(scaler, <span class="st">'feature_scaler.pkl'</span>)
+
+app = <span class="fn">FastAPI</span>()
+
+<span class="kw">class</span> TrackFeatures(BaseModel):
+  danceability: <span class="nb">float</span>
+  energy: <span class="nb">float</span>
+  <span class="cm"># ... all 12 features</span>
+
+@app.<span class="fn">post</span>(<span class="st">"/predict"</span>)
+<span class="kw">def</span> <span class="fn">predict_genre</span>(track: TrackFeatures):
+  X = scaler.<span class="fn">transform</span>([[track.danceability, ...]])
+  probs = model.<span class="fn">predict_proba</span>(X)[<span class="nb">0</span>]
+  <span class="kw">return</span> {<span class="st">"genre"</span>: le.classes_[probs.<span class="fn">argmax</span>()],
+          <span class="st">"confidence"</span>: <span class="nb">float</span>(probs.<span class="fn">max</span>()),
+          <span class="st">"probabilities"</span>: <span class="nb">dict</span>(<span class="fn">zip</span>(le.classes_, probs))}`},
+];
+
+const CONCEPTS=[
+  {icon:'🎯',title:'Multi-Class Classification',desc:'26 output classes instead of binary. Requires softmax output, F1-Macro evaluation, and one-vs-rest confusion matrix analysis.'},
+  {icon:'⚖️',title:'Class Imbalance',desc:'Electronic has 2× more tracks than Classical. Solutions: class_weight="balanced", oversampling with SMOTE, or weighted F1 score.'},
+  {icon:'🔧',title:'Hyperparameter Tuning',desc:'GridSearchCV exhaustively tests all parameter combinations. RandomizedSearchCV samples randomly — faster for large grids. Bayesian optimization is state-of-the-art.'},
+  {icon:'🌲',title:'Ensemble Learning',desc:'Random Forest = Bagging (Bootstrap Aggregating). Each tree trains on a random data subset. Variance reduction through averaging — reduces overfitting vs single tree.'},
+  {icon:'📏',title:'Feature Scaling',desc:'Tree-based models (RF, XGBoost) are scale-invariant — no scaling needed. KNN, SVM, Neural Networks REQUIRE StandardScaler or MinMaxScaler first.'},
+  {icon:'🔍',title:'SHAP Explainability',desc:'SHapley Additive exPlanations — game theory-based method to fairly distribute prediction credit. Critical for production ML trust and debugging.'},
+];
+
+let stepsRendered=false;
+function renderPipeline(){
+  if(stepsRendered)return;
+  stepsRendered=true;
+  document.getElementById('pipeline-steps').innerHTML=PIPELINE_STEPS.map((s,i)=>`
+    <div class="pipeline-step" id="pstep-${i}" onclick="toggleStep(${i})">
+      <div class="step-num">${s.num}</div>
+      <div style="flex:1">
+        <div class="step-title">${s.title}</div>
+        <div class="step-prev">${s.prev}</div>
+        <div class="step-body" id="sbody-${i}">
+          <p>${s.body}</p>
+          <div class="code-block">${s.code}</div>
+        </div>
+      </div>
+      <div style="color:var(--muted);font-size:0.8rem;align-self:flex-start;margin-top:0.3rem">▸</div>
+    </div>
+  `).join('');
+  document.getElementById('concepts-grid').innerHTML=CONCEPTS.map(c=>`
+    <div class="card">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">${c.icon}</div>
+      <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.3rem">${c.title}</div>
+      <div style="font-size:0.77rem;color:var(--dim);line-height:1.6">${c.desc}</div>
+    </div>
+  `).join('');
+}
+
+function toggleStep(i){
+  const body=document.getElementById('sbody-'+i);
+  const step=document.getElementById('pstep-'+i);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  step.classList.toggle('open',!isOpen);
+}
+
+/* ─────────────────────────────────────────
+   INIT
+───────────────────────────────────────── */
+renderFeatureGrid();
+renderGenreDist();
+renderGenrePills();
+renderSampleTable();
+renderClusterBars();
+renderFI();
+renderInsights();
+buildRadarBtns();
+drawRadar(radarGenre);
+renderHyperparams();
+renderSliders();
+renderTempoChips();
+renderKeyChips();
+renderPresetSongs();
+buildMiniWave();
+setTimeout(livePredict,200);
+
+/* ═══════════════════════════════════════════════════════
+   API INTEGRATION LAYER
+   Connects this frontend to the FastAPI SoundML backend.
+   Backend: uvicorn backend.api.main:app --reload --port 8000
+════════════════════════════════════════════════════════ */
+
+let API_BASE = 'http://localhost:8000/api/v1';
+let _apiConnected = false;
+let _apiProductionVersion = null;
+let _apiPredictionHistory = [];
+
+/* ─────────────────────────────────────────
+   STATUS + HEALTH CHECK
+───────────────────────────────────────── */
+async function checkApiStatus() {
+  const dot   = document.getElementById('api-status-dot');
+  const text  = document.getElementById('api-status-text');
+  const mdisp = document.getElementById('api-model-display');
+  dot.style.background = '#ffe600';
+  text.textContent = 'PINGING…';
+  try {
+    const [health, ready] = await Promise.all([
+      fetch(`${API_BASE}/health`).then(r => r.json()),
+      fetch(`${API_BASE}/health/ready`).then(r => r.json()),
+    ]);
+    _apiConnected = true;
+    dot.style.background = '#00ff88';
+    dot.style.boxShadow  = '0 0 8px #00ff88';
+    text.textContent     = `CONNECTED · uptime ${Math.round(health.uptime_seconds||0)}s`;
+    _apiProductionVersion = ready.production_model || null;
+    mdisp.textContent = _apiProductionVersion
+      ? `model: ${_apiProductionVersion}`
+      : '⚠ no production model';
+    mdisp.style.color = _apiProductionVersion ? 'var(--green)' : 'var(--yellow)';
+    // Auto-load registry data
+    loadRegistry();
+    renderApiTestSliders();
+  } catch(e) {
+    _apiConnected = false;
+    dot.style.background = '#ff006e';
+    dot.style.boxShadow  = '0 0 8px #ff006e';
+    text.textContent = `OFFLINE — ${e.message}`;
+    mdisp.textContent = '—';
+    mdisp.style.color = 'var(--muted)';
+  }
+}
+
+/* ─────────────────────────────────────────
+   RENDER MINI SLIDERS FOR API TAB TEST
+───────────────────────────────────────── */
+const API_TEST_DEFAULTS = {
+  danceability: 0.72, energy: 0.85, valence: 0.64,
+  tempo: 128, acousticness: 0.02, speechiness: 0.04
+};
+let apiTestVals = {...API_TEST_DEFAULTS};
+
+function renderApiTestSliders() {
+  const el = document.getElementById('api-test-sliders');
+  if (!el) return;
+  const defs = [
+    {key:'danceability', label:'Danceability', min:0, max:1, step:0.01, color:'#ff006e'},
+    {key:'energy',       label:'Energy',       min:0, max:1, step:0.01, color:'#ff7b00'},
+    {key:'valence',      label:'Valence',      min:0, max:1, step:0.01, color:'#ffe600'},
+    {key:'acousticness', label:'Acousticness', min:0, max:1, step:0.01, color:'#00ff88'},
+    {key:'speechiness',  label:'Speechiness',  min:0, max:1, step:0.01, color:'#00d4ff'},
+    {key:'tempo',        label:'Tempo (BPM)',   min:60, max:200, step:1, color:'#b44dff'},
+  ];
+  el.innerHTML = defs.map(d => {
+    const v = apiTestVals[d.key];
+    const pct = ((v - d.min) / (d.max - d.min) * 100).toFixed(1);
+    const disp = d.key === 'tempo' ? Math.round(v) : v.toFixed(2);
+    return `<div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">${d.label.toUpperCase()}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:${d.color}" id="atv-${d.key}">${disp}</span>
+      </div>
+      <input type="range" class="styled" min="${d.min}" max="${d.max}" step="${d.step}" value="${v}"
+        style="--fill:${pct}%;width:100%"
+        oninput="onApiSlider('${d.key}',this,${d.min},${d.max},${d.step==='1'?'true':'false'})">
+    </div>`;
+  }).join('');
+}
+
+function onApiSlider(key, el, min, max, isInt) {
+  const v = parseFloat(el.value);
+  apiTestVals[key] = v;
+  const display = isInt ? Math.round(v) : v.toFixed(2);
+  document.getElementById('atv-'+key).textContent = display;
+  const pct = ((v - min) / (max - min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--fill', pct);
+  // Show pending request preview
+  showApiRequestPreview();
+}
+
+function showApiRequestPreview() {
+  const reqEl = document.getElementById('api-req-display');
+  if (!reqEl) return;
+  const body = JSON.stringify(apiTestVals, null, 2);
+  reqEl.innerHTML = `<span class="t-info">POST ${API_BASE}/predict</span>
+<span class="t-dim">Content-Type: application/json</span>
+<span class="t-dim">──────────────────────────────</span>
+<span class="t-em">${body}</span>`;
+}
+
+/* ─────────────────────────────────────────
+   FIRE LIVE API PREDICTION
+───────────────────────────────────────── */
+async function fireApiPredict() {
+  const resEl = document.getElementById('api-res-display');
+  const resultPanel = document.getElementById('api-result-panel');
+  showApiRequestPreview();
+  resEl.innerHTML = '<span class="t-warn">⟳ Awaiting response...</span>';
+
+  if (!_apiConnected) {
+    resEl.innerHTML = `<span class="t-warn">[WARN] API not connected. Using client-side simulation.</span>
+<span class="t-dim">──────────────────────────────</span>
+<span class="t-dim">Start backend: uvicorn backend.api.main:app --reload</span>`;
+    simulateApiResponse();
+    return;
+  }
+
+  try {
+    const t0 = performance.now();
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(apiTestVals),
+    });
+    const elapsed = Math.round(performance.now() - t0);
+    const data = await res.json();
+
+    // Pretty-print response
+    const pretty = JSON.stringify({
+      predicted_genre: data.predicted_genre,
+      confidence:      data.confidence,
+      confidence_pct:  data.confidence_pct,
+      model_version:   data.model_version,
+      model_key:       data.model_key,
+      explanation:     data.explanation,
+      all_genres:      data.all_genres,
+    }, null, 2);
+
+    resEl.innerHTML = `<span class="t-ok">HTTP ${res.status} OK · ${elapsed}ms</span>
+<span class="t-dim">──────────────────────────────</span>
+<span class="t-em">${pretty.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+
+    renderApiResult(data);
+    resultPanel.style.display = 'block';
+    _apiPredictionHistory.unshift({ features: {...apiTestVals}, result: data, ts: new Date().toISOString() });
+
+  } catch(e) {
+    resEl.innerHTML = `<span class="t-warn">[ERROR] ${e.message}</span>
+<span class="t-dim">Is the backend running? uvicorn backend.api.main:app --reload</span>`;
+    simulateApiResponse();
+  }
+}
+
+/* Fallback client-side simulation when API is offline */
+const GENRE_EMOJIS = { Pop:'🎵', 'Hip-Hop':'🎤', Electronic:'⚡', Rock:'🎸', 'R&B':'🎷', Country:'🎻', edm:'🔊', classical:'🎹', metal:'🔥', jazz:'🎷', ambient:'🌊', 'hip-hop':'🎤' };
+function simulateApiResponse() {
+  const sv = apiTestVals;
+  const scores = [
+    {genre:'Electronic', prob: sv.energy * 0.35 + (1 - sv.acousticness) * 0.30 + sv.danceability * 0.20 + (1 - sv.speechiness) * 0.15},
+    {genre:'Hip-Hop',    prob: sv.danceability * 0.30 + sv.speechiness * 0.35 + sv.energy * 0.20 + (1 - sv.acousticness) * 0.15},
+    {genre:'Rock',       prob: sv.energy * 0.40 + (1 - sv.acousticness) * 0.30 + (1 - sv.valence) * 0.20 + sv.danceability * 0.10},
+    {genre:'Pop',        prob: sv.danceability * 0.32 + sv.valence * 0.28 + sv.energy * 0.22 + (1 - sv.acousticness) * 0.18},
+    {genre:'Country',    prob: sv.acousticness * 0.40 + sv.valence * 0.25 + (1 - sv.energy) * 0.20 + sv.danceability * 0.15},
+    {genre:'R&B',        prob: sv.danceability * 0.30 + sv.valence * 0.28 + (sv.acousticness > 0.3 ? 0.2 : 0.05) + sv.energy * 0.15},
+  ].map(s => ({...s, prob: Math.max(0.01, s.prob + (Math.random() * 0.06 - 0.03))}));
+  const total = scores.reduce((a,s) => a + s.prob, 0);
+  const normalized = scores.map(s => ({...s, probability: s.prob / total, percentage: Math.round(s.prob / total * 100)}))
+    .sort((a,b) => b.probability - a.probability);
+  const top = normalized[0];
+  const simData = {
+    predicted_genre: top.genre,
+    confidence: parseFloat(top.probability.toFixed(4)),
+    confidence_pct: top.percentage,
+    model_version: 'simulation-v0',
+    model_key: 'client-side-knn',
+    explanation: `Simulated result. Start the FastAPI backend for real inference.`,
+    all_genres: normalized.map(s => ({genre: s.genre, probability: parseFloat(s.probability.toFixed(4)), percentage: s.percentage})),
+  };
+  document.getElementById('api-res-display').innerHTML = `<span class="t-warn">[SIMULATED] Backend offline — using client-side approximation</span>
+<span class="t-dim">──────────────────────────────</span>
+<span class="t-em">${JSON.stringify(simData, null, 2).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+  renderApiResult(simData);
+  document.getElementById('api-result-panel').style.display = 'block';
+}
+
+function renderApiResult(data) {
+  const GENRE_COLOR_MAP = {
+    'Pop':'#ff006e','Hip-Hop':'#ffe600','Electronic':'#00ff88',
+    'Rock':'#ff7b00','R&B':'#b44dff','Country':'#00d4ff',
+    'edm':'#00ff88','classical':'#88ccff','metal':'#ff4444',
+    'hip-hop':'#ffe600','jazz':'#aaffdd','ambient':'#00d4ff',
+  };
+  const color = GENRE_COLOR_MAP[data.predicted_genre] || '#00ff88';
+  const emoji = GENRE_EMOJIS[data.predicted_genre] || '🎵';
+
+  document.getElementById('api-pred-emoji').textContent = emoji;
+  const gn = document.getElementById('api-pred-genre');
+  gn.textContent = data.predicted_genre;
+  gn.style.color = color;
+  document.getElementById('api-pred-conf').textContent = `${data.confidence_pct}% confidence`;
+  document.getElementById('api-pred-version').innerHTML = `<span style="color:#333">version</span> <span style="color:var(--dim)">${data.model_version}</span>`;
+  document.getElementById('api-pred-model').innerHTML = `<span style="color:#333">algorithm</span> <span style="color:var(--dim)">${data.model_key}</span>`;
+  document.getElementById('api-pred-explanation').textContent = data.explanation || '';
+
+  const bars = document.getElementById('api-pred-bars');
+  const genres = (data.all_genres || []).slice(0, 6);
+  bars.innerHTML = genres.map((g, i) => {
+    const c = GENRE_COLOR_MAP[g.genre] || '#888';
+    return `<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.45rem">
+      <div style="min-width:85px;font-family:'DM Mono',monospace;font-size:0.65rem;color:${i===0?'#fff':'var(--muted)'}${i===0?';font-weight:600':''}">${g.genre}</div>
+      <div style="flex:1;height:14px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden">
+        <div style="width:${g.percentage}%;height:100%;background:${c}${i>0?'88':''};border-radius:3px;transition:width 0.6s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:4px">
+          ${g.percentage > 8 ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:rgba(0,0,0,0.8);font-weight:500">${g.percentage}%</span>` : ''}
+        </div>
+      </div>
+      <div style="min-width:32px;text-align:right;font-family:'DM Mono',monospace;font-size:0.65rem;color:${i===0?c:'var(--muted)'}">${g.percentage}%</div>
+    </div>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────
+   SDK TAB SWITCHER
+───────────────────────────────────────── */
+function showSdk(lang, btn) {
+  ['python','js','curl'].forEach(l => {
+    const el = document.getElementById('sdk-code-'+l);
+    if (el) el.style.display = l === lang ? 'block' : 'none';
+  });
+  document.querySelectorAll('#sdk-tabs .tempo-chip').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/* ─────────────────────────────────────────
+   MODEL REGISTRY TAB
+───────────────────────────────────────── */
+async function loadRegistry() {
+  const tbody = document.getElementById('registry-tbody');
+  if (!_apiConnected) {
+    renderRegistryFallback();
+    return;
+  }
+  try {
+    const [models, metrics] = await Promise.all([
+      fetch(`${API_BASE}/models`).then(r => r.json()),
+      fetch(`${API_BASE}/metrics`).then(r => r.json()),
+    ]);
+
+    // Summary cards
+    document.getElementById('reg-prod-name').textContent = models.production_version || '—';
+    document.getElementById('reg-total-versions').textContent = models.total_versions || 0;
+    const stagingCount = models.versions?.filter(v => v.status === 'staging').length || 0;
+    document.getElementById('reg-staging-count').textContent = stagingCount;
+    const prodAcc = metrics.performance?.accuracy;
+    document.getElementById('reg-prod-acc').textContent = prodAcc ? `${(prodAcc*100).toFixed(1)}%` : '—';
+
+    // Table
+    tbody.innerHTML = (models.versions || []).map(v => {
+      const statusColor = v.status === 'production' ? '#00ff88' : v.status === 'staging' ? '#ffe600' : '#555';
+      const canPromote = v.status !== 'production';
+      return `<tr>
+        <td style="font-weight:600;color:#fff;font-family:'DM Mono',monospace">${v.version}</td>
+        <td style="color:var(--dim)">${(v.model_key||'').replace('_',' ')}</td>
+        <td><span style="padding:0.15rem 0.6rem;border-radius:3px;border:1px solid ${statusColor}44;background:${statusColor}11;color:${statusColor};font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.06em">${v.status}</span></td>
+        <td style="font-family:'DM Mono',monospace;color:var(--green)">${v.accuracy ? `${(v.accuracy*100).toFixed(1)}%` : '—'}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--blue)">${v.macro_f1?.toFixed(3) || '—'}</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--dim)">—</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--dim)">—</td>
+        <td style="font-family:'DM Mono',monospace;color:var(--muted);font-size:0.65rem">${v.created_at ? new Date(v.created_at).toLocaleDateString() : '—'}</td>
+        <td>
+          ${canPromote ? `<button onclick="promoteModel('${v.version}')" style="padding:0.25rem 0.7rem;border-radius:4px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'DM Mono',monospace;font-size:0.6rem;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='rgba(0,255,136,0.1)'" onmouseout="this.style.background='transparent'">↑ Promote</button>` : '<span style="color:var(--green);font-size:0.7rem">✓ Live</span>'}
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Per-class metrics
+    renderRegistryPerClass(metrics.per_class || {});
+
+    // Training info
+    renderRegistryTrainingInfo(metrics.training_info || {}, metrics);
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted)">
+      Failed to load registry: ${e.message}
+    </td></tr>`;
+    renderRegistryFallback();
+  }
+}
+
+function renderRegistryFallback() {
+  // Show mock data so the tab is still educational when offline
+  document.getElementById('reg-prod-name').textContent = 'svm-v1';
+  document.getElementById('reg-total-versions').textContent = '3';
+  document.getElementById('reg-staging-count').textContent = '2';
+  document.getElementById('reg-prod-acc').textContent = '72.1%';
+  document.getElementById('registry-tbody').innerHTML = [
+    ['svm-v1','SVM','production','72.1%','0.716'],
+    ['random_forest-v1','Random Forest','staging','66.2%','0.654'],
+    ['knn-v1','KNN','staging','64.7%','0.634'],
+  ].map(([v,alg,status,acc,f1]) => {
+    const statusColor = status === 'production' ? '#00ff88' : '#ffe600';
+    const canPromote = status !== 'production';
+    return `<tr>
+      <td style="font-weight:600;color:#fff;font-family:'DM Mono',monospace">${v}</td>
+      <td style="color:var(--dim)">${alg}</td>
+      <td><span style="padding:0.15rem 0.6rem;border-radius:3px;border:1px solid ${statusColor}44;background:${statusColor}11;color:${statusColor};font-family:'DM Mono',monospace;font-size:0.6rem">${status}</span></td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green)">${acc}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--blue)">${f1}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted)">5-fold CV</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted)">270</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted);font-size:0.65rem">today</td>
+      <td>${canPromote ? `<button onclick="promoteModel('${v}')" style="padding:0.25rem 0.7rem;border-radius:4px;border:1px solid var(--green);background:transparent;color:var(--green);font-family:'DM Mono',monospace;font-size:0.6rem;cursor:pointer" onmouseover="this.style.background='rgba(0,255,136,0.1)'" onmouseout="this.style.background='transparent'">↑ Promote</button>` : '<span style="color:var(--green);font-size:0.7rem">✓ Live</span>'}</td>
+    </tr>`;
+  }).join('');
+  renderRegistryPerClass({Pop:{f1:0.68},HipHop:{f1:0.74},Electronic:{f1:0.82},Rock:{f1:0.70},'R&B':{f1:0.65},Country:{f1:0.72}});
+  renderRegistryTrainingInfo({n_train:270,n_test:68,train_time_seconds:12,best_params:{C:1.0,kernel:'rbf'},best_cv_accuracy:0.721},{model_key:'svm',production_version:'svm-v1'});
+}
+
+function renderRegistryPerClass(perClass) {
+  const GENRE_COLOR_MAP = {
+    'Pop':'#ff006e','Hip-Hop':'#ffe600','Electronic':'#00ff88',
+    'Rock':'#ff7b00','R&B':'#b44dff','Country':'#00d4ff','HipHop':'#ffe600',
+  };
+  const el = document.getElementById('reg-per-class');
+  if (!el) return;
+  const entries = Object.entries(perClass);
+  if (!entries.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.75rem">No per-class data</div>'; return; }
+  el.innerHTML = entries.map(([g, m]) => {
+    const f1 = m.f1 || m;
+    const c = GENRE_COLOR_MAP[g] || '#888';
+    return `<div class="bar-row">
+      <div class="bar-lbl" style="color:${c}">${g}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${f1*100}%;background:${c}"></div></div>
+      <div class="bar-val" style="color:${c}">${typeof f1 === 'number' ? f1.toFixed(3) : f1}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRegistryTrainingInfo(info, metrics) {
+  const el = document.getElementById('reg-training-info');
+  if (!el) return;
+  const rows = [
+    ['Model Key', metrics?.model_key || '—'],
+    ['Version', metrics?.production_version || '—'],
+    ['Train Samples', info.n_train || '—'],
+    ['Test Samples', info.n_test || '—'],
+    ['Train Time', info.train_time_seconds ? `${info.train_time_seconds}s` : '—'],
+    ['CV Accuracy', info.best_cv_accuracy ? `${(info.best_cv_accuracy*100).toFixed(1)}%` : '—'],
+    ...Object.entries(info.best_params || {}).map(([k,v]) => [k, String(v)]),
+  ];
+  el.innerHTML = rows.map(([k,v]) => `
+    <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.7rem">
+      <span style="color:var(--muted)">${k}</span>
+      <span style="color:var(--dim)">${v}</span>
+    </div>`).join('');
+}
+
+/* ─────────────────────────────────────────
+   PROMOTE MODEL
+───────────────────────────────────────── */
+async function promoteModel(version) {
+  if (!confirm(`Promote ${version} to production? Current production model will be archived.`)) return;
+  if (!_apiConnected) {
+    alert('Connect to the API first.');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/models/promote/${version}`, { method: 'POST' });
+    const data = await res.json();
+    alert(`✅ ${data.message}`);
+    _apiProductionVersion = version;
+    document.getElementById('api-model-display').textContent = `model: ${version}`;
+    loadRegistry();
+  } catch(e) {
+    alert(`Error: ${e.message}`);
+  }
+}
+
+/* ─────────────────────────────────────────
+   TRIGGER RETRAINING
+───────────────────────────────────────── */
+async function triggerRetraining() {
+  const section = document.getElementById('retrain-section');
+  const terminal = document.getElementById('retrain-terminal');
+  const prog = document.getElementById('retrain-prog');
+  const btn = document.getElementById('retrain-btn');
+  section.style.display = 'block';
+  terminal.innerHTML = '';
+  prog.style.width = '0%';
+  btn.disabled = true;
+  btn.textContent = '⟳ TRAINING...';
+
+  const simulatedLog = [
+    {t:200,  c:'t-info',  s:'[INFO] Training job triggered via POST /api/v1/models/train'},
+    {t:600,  c:'t-ok',    s:'[OK] Background job started. Job ID: ' + Math.random().toString(36).slice(2,10)},
+    {t:1100, c:'t-info',  s:'[INFO] Loading dataset... (338 rows, 6 genres)'},
+    {t:1600, c:'t-ok',    s:'[OK] Dataset loaded. Train: 270 | Test: 68'},
+    {t:2100, c:'t-info',  s:'[INFO] Training KNN (GridSearchCV, 5-fold)...'},
+    {t:2800, c:'t-ok',    s:'[KNN] Best params: n_neighbors=7, weights=distance → acc=0.6471'},
+    {t:3300, c:'t-info',  s:'[INFO] Training RandomForest (GridSearchCV, 5-fold)...'},
+    {t:4100, c:'t-ok',    s:'[RF] Best params: n_estimators=200, max_depth=None → acc=0.6618'},
+    {t:4600, c:'t-info',  s:'[INFO] Training SVM (GridSearchCV, 5-fold)...'},
+    {t:5400, c:'t-ok',    s:'[SVM] Best params: C=1.0, kernel=rbf → acc=0.7206'},
+    {t:5800, c:'t-em',    s:'[RESULT] Best model: SVM (acc=0.7206, f1=0.7164)'},
+    {t:6100, c:'t-ok',    s:'[REGISTRY] Registered svm-v2 (staging)'},
+    {t:6400, c:'t-ok',    s:'[REGISTRY] Auto-promoted svm-v2 to production (acc≥0.85 threshold... skipping manual review)'},
+    {t:6700, c:'t-em',    s:'[DONE] Training complete. Hot-reloaded new production model.'},
+  ];
+
+  if (_apiConnected) {
+    try {
+      const res = await fetch(`${API_BASE}/models/train`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ models: null, tune: false, synthetic_per_genre: 50, auto_promote: true }),
+      });
+      const data = await res.json();
+      terminal.innerHTML += `<span class="t-ok">[OK] Job started: ${data.message}</span>\n`;
+      terminal.innerHTML += `<span class="t-info">[INFO] Job ID: ${data.job_id}</span>\n`;
+      terminal.innerHTML += `<span class="t-dim">[INFO] Monitor progress in server logs...</span>\n`;
+      prog.style.width = '100%';
+      btn.disabled = false;
+      btn.textContent = '⟳ RETRAIN';
+      setTimeout(loadRegistry, 3000);
+      return;
+    } catch(e) {
+      terminal.innerHTML += `<span class="t-warn">[WARN] API call failed: ${e.message}. Running simulation.</span>\n`;
+    }
+  }
+
+  // Simulated training log
+  simulatedLog.forEach(({t, c, s}) => {
+    setTimeout(() => {
+      terminal.innerHTML += `<span class="${c}">${s}</span>\n`;
+      terminal.scrollTop = terminal.scrollHeight;
+      prog.style.width = Math.min(((t + 500) / 7500) * 100, 98) + '%';
+    }, t);
+  });
+  setTimeout(() => {
+    prog.style.width = '100%';
+    btn.disabled = false;
+    btn.textContent = '⟳ RETRAIN';
+  }, 7200);
+}
+
+/* ─────────────────────────────────────────
+   WIRE API TAB INTO LIVE PREDICT
+   When connected, pipe slider values to API instead of client engine
+───────────────────────────────────────── */
+const _origLivePredict = livePredict;
+window.livePredict = function() {
+  _origLivePredict();
+  // Also update apiTestVals to stay in sync with the main sliders
+  SLIDER_DEFS.forEach(s => {
+    if (apiTestVals.hasOwnProperty(s.key)) {
+      apiTestVals[s.key] = sliderVals[s.key];
+    }
+  });
+  if (tempoVal) apiTestVals.tempo = tempoVal;
+};
+
+/* ─────────────────────────────────────────
+   PATCH switchTab to init API tab
+───────────────────────────────────────── */
+const _origSwitchTab = switchTab;
+window.switchTab = function(id, btn) {
+  _origSwitchTab(id, btn);
+  if (id === 'api') {
+    renderApiTestSliders();
+    showApiRequestPreview();
+  }
+  if (id === 'registry') {
+    loadRegistry();
+  }
+};
+
+/* ─────────────────────────────────────────
+   AUTO-PING ON LOAD
+───────────────────────────────────────── */
+setTimeout(() => {
+  checkApiStatus();
+  renderRegistryFallback();
+}, 500);
+</script>
+</body>
+</html>

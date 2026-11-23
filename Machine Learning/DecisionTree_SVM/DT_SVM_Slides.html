@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Trees &amp; SVM — Beginner Slides</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css">
+<style>
+  :root { --accent:#1f6feb; --accent2:#d1495b; --ink:#0b2545; }
+  .reveal { font-family:"Segoe UI", system-ui, sans-serif; }
+  .reveal h1,.reveal h2,.reveal h3 { color:var(--ink); text-transform:none; font-weight:700; }
+  .reveal h1 { font-size:2.0em; } .reveal h2 { font-size:1.42em; } .reveal h3 { font-size:1.05em; }
+  .reveal section { text-align:left; font-size:0.80em; }
+  .reveal section.center { text-align:center; }
+  .reveal table { font-size:0.84em; }
+  .reveal th { background:var(--ink); color:#fff; }
+  .reveal td,.reveal th { padding:.26em .6em; }
+  .reveal tr:nth-child(even) td { background:#f3f6fb; }
+  .box  { background:#eef4ff; border-left:6px solid var(--accent);  padding:.6em .9em; border-radius:6px; margin:.4em 0; }
+  .warn { background:#fdeff2; border-left:6px solid var(--accent2); padding:.6em .9em; border-radius:6px; margin:.4em 0; }
+  .good { background:#eafaf1; border-left:6px solid #2e9e5b;        padding:.6em .9em; border-radius:6px; margin:.4em 0; }
+  .cols { display:flex; gap:1.1em; } .cols > div { flex:1; }
+  .big { font-size:1.5em; color:var(--accent); font-weight:700; }
+  .small { font-size:.82em; color:#555; }
+  .cap { text-align:center; font-size:.76em; color:#666; margin-top:.15em; }
+  .reveal pre { font-size:.52em; box-shadow:none; border:1px solid #dde; }
+  .reveal img.chart { display:block; margin:.3em auto; width:auto; height:auto;
+                      max-width:100%; max-height:330px;
+                      border:1px solid #e3e8f0; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.08); background:#fff; }
+  .reveal img.chart.tall { max-height:430px; }
+  /* ---- interactive switcher ---- */
+  .switch { text-align:center; margin:.35em 0 .2em; }
+  .switch button {
+    font:inherit; font-size:.78em; font-weight:700; cursor:pointer;
+    border:2px solid var(--accent); background:#fff; color:var(--accent);
+    border-radius:22px; padding:.3em 1.0em; margin:0 .22em; transition:all .15s;
+  }
+  .switch button:hover { background:#dbe9ff; }
+  .switch button.on { background:var(--accent); color:#fff; }
+  .switch .lab { font-size:.72em; color:#666; margin-right:.5em; }
+  .switch .live { background:#2e9e5b; color:#fff; border-radius:20px; padding:.15em .7em;
+                  font-size:.62em; font-weight:700; letter-spacing:.5px; margin-right:.7em; }
+  .quiz button {
+    display:block; width:100%; text-align:left; font:inherit; font-size:.8em;
+    margin:.3em 0; padding:.45em .8em; border-radius:8px; cursor:pointer;
+    border:2px solid #cfd8e6; background:#fff;
+  }
+  .quiz button:hover { border-color:var(--accent); }
+  .quiz button.right { background:#eafaf1; border-color:#2e9e5b; }
+  .quiz button.wrong { background:#fdeff2; border-color:var(--accent2); }
+  .quiz .why { display:none; margin-top:.4em; font-size:.8em; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- ============ TITLE ============ -->
+<section class="center" data-background-gradient="linear-gradient(120deg,#0b2545,#1f6feb)">
+  <h1 style="color:#fff">Decision Trees &amp; SVM</h1>
+  <h3 style="color:#cfe3ff">Two classic models · classification AND regression</h3>
+  <p style="color:#fff">What it is · How it learns · Parameters · Metrics · Where it's used</p>
+  <p class="small" style="color:#cfe3ff">Built on 5,000 real Indian engineering student records</p>
+</section>
+
+<section>
+  <h2>Roadmap</h2>
+  <div class="cols">
+    <div>
+      <h3>Part 1 — Decision Tree 🌳</h3>
+      <ol style="font-size:.9em">
+        <li>What is it?</li><li>How it learns</li><li>Depth &amp; overfitting</li>
+        <li>Tree for regression</li><li>Parameters</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Part 2 — SVM 🛣️</h3>
+      <ol style="font-size:.9em">
+        <li>What is it?</li><li>Margin &amp; support vectors</li><li>C, kernel, gamma</li>
+        <li>SVR for regression</li><li>Why scaling matters</li>
+      </ol>
+    </div>
+  </div>
+  <div class="box"><b>Part 3</b> — Evaluation metrics &nbsp;·&nbsp; <b>Part 4</b> — Head to head &nbsp;·&nbsp; <b>Part 5</b> — Cheat sheet</div>
+  <p class="cap">🖱️ Slides with a green <b>CLICK ME</b> badge are interactive — press the buttons and watch the model change.</p>
+</section>
+
+<!-- ============ DATA ============ -->
+<section>
+  <h2>Our dataset</h2>
+  <img class="chart" src="assets/01_dataset.png" alt="placement status counts and salary distribution">
+  <div class="cols">
+    <div class="box"><b>23 features</b><br>CGPA, coding skill, internships, projects, backlogs, attendance, branch…</div>
+    <div class="warn"><b>Notice:</b> only <b>14%</b> were NOT placed.<br>Remember this — it breaks "accuracy" later.</div>
+  </div>
+</section>
+
+<section>
+  <h2>The same data, two different questions</h2>
+  <img class="chart" src="assets/02_two_tasks.png" alt="classification vs regression on the same data">
+  <table>
+    <tr><th></th><th>Classification</th><th>Regression</th></tr>
+    <tr><td><b>Question</b></td><td>Will this student get placed?</td><td>What salary will they get?</td></tr>
+    <tr><td><b>Answer type</b></td><td>a LABEL (Placed / Not Placed)</td><td>a NUMBER (14.9 LPA)</td></tr>
+    <tr><td><b>Model name</b></td><td>DecisionTree<b>Classifier</b> · <b>SVC</b></td><td>DecisionTree<b>Regressor</b> · <b>SVR</b></td></tr>
+  </table>
+  <div class="good"><b>Good news:</b> both Decision Trees and SVM do <b>both</b> jobs. Same idea, different last step.</div>
+</section>
+
+<!-- ============ PART 1 : TREES ============ -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 1</h1>
+  <h2 style="color:#8fc0ff">Decision Trees 🌳</h2>
+</section>
+
+<section>
+  <h2>What is a Decision Tree?</h2>
+  <div class="big center">It plays "20 Questions" with your data.</div>
+  <div class="cols">
+    <div class="box">
+      <b>A human placement officer would ask:</b><br><br>
+      "Is the CGPA above 7.5?" → yes<br>
+      "Any backlogs?" → no<br>
+      "Coding skill 3 or more?" → yes<br>
+      <b>→ This student will get placed.</b>
+    </div>
+    <div class="good">
+      <b>That's literally the model.</b><br><br>
+      A tree is just a flowchart of yes/no questions that the computer
+      <em>worked out by itself</em> from the data.<br><br>
+      No maths needed to read it — which is why people trust it.
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>A real tree, trained on our 5,000 students</h2>
+  <img class="chart tall" src="assets/03_tree_diagram.png" alt="trained decision tree, depth 3">
+  <p class="cap">Read top → bottom. Each box asks one question. Blue = "Placed", orange = "Not Placed".</p>
+</section>
+
+<section>
+  <h2>How does it learn? It tries every question.</h2>
+  <img class="chart" src="assets/04_first_split.png" alt="comparison of two candidate splits">
+  <div class="box">
+    Before splitting: 86% placed — one big mixed group.<br>
+    The tree tries <b>every feature at every cut-off</b>, and keeps the one that makes the two
+    resulting groups the <b>purest</b> (most one-sided).
+  </div>
+  <div class="good">Then it repeats the same trick inside each new group. That's it — that's training.</div>
+</section>
+
+<section>
+  <h2>"Purity" in one picture</h2>
+  <div class="cols">
+    <div class="warn center"><b>Impure 😕</b><br><span style="font-size:2em">🔵🔴🔵🔴🔵🔴</span><br>50/50 — the question told us nothing</div>
+    <div class="good center"><b>Pure 😀</b><br><span style="font-size:2em">🔵🔵🔵🔵🔵🔴</span><br>almost all one class — great question!</div>
+  </div>
+  <div class="box">
+    Scikit-learn measures this with <b>gini</b> (default) or <b>entropy</b>.<br>
+    You do <em>not</em> need the formula — just remember: <b>lower impurity = better split</b>,
+    and the two options almost always give the same tree.
+  </div>
+</section>
+
+<section>
+  <h2>A tree carves the space into BOXES</h2>
+  <div class="switch" data-group="depth">
+    <span class="live">CLICK ME</span><span class="lab">max_depth:</span>
+    <button data-img="assets/05_depth_1.png" class="on">1</button>
+    <button data-img="assets/05_depth_2.png">2</button>
+    <button data-img="assets/05_depth_3.png">3</button>
+    <button data-img="assets/05_depth_5.png">5</button>
+    <button data-img="assets/05_depth_12.png">12</button>
+    <button data-img="assets/05_depth_full.png">no limit</button>
+  </div>
+  <img class="chart" id="img-depth" src="assets/05_depth_1.png" alt="decision tree boundary">
+  <div class="box">Every question = one straight cut. More depth → more boxes → the boundary starts
+  chasing individual students. <b>Watch the test accuracy as you click up.</b></div>
+</section>
+
+<section>
+  <h2>The #1 problem: overfitting</h2>
+  <img class="chart" src="assets/06_overfitting.png" alt="train vs test accuracy by depth">
+  <div class="warn">
+    A fully grown tree scores <b>100% on data it has already seen</b> and gets <em>worse</em> on new students.
+    It memorised names instead of learning rules.
+  </div>
+  <div class="good"><b>The fix = pruning:</b> cap <code>max_depth</code>, or demand a minimum number of
+  students per leaf. A smaller tree usually wins.</div>
+</section>
+
+<section>
+  <h2>Same tree, now predicting a NUMBER</h2>
+  <img class="chart" src="assets/07_tree_regression.png" alt="regression tree staircase at depths 1, 3, 10">
+  <div class="box">
+    <b>Classification tree:</b> each leaf votes for a class → "Placed".<br>
+    <b>Regression tree:</b> each leaf reports the <b>average salary</b> of the students inside it → "16.4 LPA".
+  </div>
+  <div class="warn">That's why the prediction is a <b>staircase</b>, never a smooth line —
+  and why a tree can never predict a salary higher than anything it saw in training.</div>
+</section>
+
+<section>
+  <h2>Bonus: it tells you what mattered</h2>
+  <img class="chart" src="assets/08_importance.png" alt="feature importance bar chart">
+  <div class="good">
+    "CGPA and coding skill drive placement" — a sentence you can say to a principal
+    without saying the word <em>algorithm</em>. Very few models give you this for free.
+  </div>
+</section>
+
+<section>
+  <h2>Decision Tree — the parameters you'll actually touch</h2>
+  <table>
+    <tr><th>Parameter</th><th>What it does</th><th>Start with</th></tr>
+    <tr><td><code>max_depth</code></td><td>how many questions deep — <b>the main dial</b></td><td>3 – 8</td></tr>
+    <tr><td><code>min_samples_leaf</code></td><td>a leaf must hold at least this many students</td><td>10 – 50</td></tr>
+    <tr><td><code>min_samples_split</code></td><td>don't split a group smaller than this</td><td>20</td></tr>
+    <tr><td><code>criterion</code></td><td>how purity is measured (<code>gini</code>/<code>entropy</code>)</td><td>default</td></tr>
+    <tr><td><code>class_weight</code></td><td><code>'balanced'</code> — care more about the rare class</td><td>try it here!</td></tr>
+  </table>
+  <div class="box"><b>Rule of thumb:</b> every one of these does the same job — <b>keep the tree small</b>.</div>
+</section>
+
+<section>
+  <h2>Decision Tree — the honest summary</h2>
+  <div class="cols">
+    <div class="good"><b>✅ Strengths</b>
+      <ul style="font-size:.92em">
+        <li>You can <b>read</b> it — explainable</li>
+        <li>No feature scaling needed</li>
+        <li>Handles numbers + categories</li>
+        <li>Barely bothered by outliers</li>
+        <li>Fast to train</li>
+      </ul></div>
+    <div class="warn"><b>❌ Weaknesses</b>
+      <ul style="font-size:.92em">
+        <li><b>Overfits</b> if you let it grow</li>
+        <li>Unstable — change a few rows, get a different tree</li>
+        <li>Only straight, axis-parallel cuts</li>
+        <li>Cannot extrapolate beyond training data</li>
+      </ul></div>
+  </div>
+  <div class="box"><b>Used for:</b> loan approval, medical triage, churn, fraud rules, credit scoring —
+  anywhere a human must be able to <em>justify</em> the decision.</div>
+</section>
+
+<section>
+  <h2>The weakness has a famous fix</h2>
+  <img class="chart" src="assets/20_forest.png" alt="single tree vs pruned tree vs random forest accuracy">
+  <div class="good">
+    Train hundreds of slightly different trees and let them <b>vote</b> →
+    <b>Random Forest</b> / <b>Gradient Boosting</b> (XGBoost, LightGBM).<br>
+    You lose the pretty picture, you gain accuracy. Trees are the building block of the
+    most-used models in industry.
+  </div>
+</section>
+
+<!-- ============ PART 2 : SVM ============ -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 2</h1>
+  <h2 style="color:#8fc0ff">Support Vector Machines 🛣️</h2>
+</section>
+
+<section>
+  <h2>What is an SVM?</h2>
+  <div class="big center">It draws the widest possible street between two groups.</div>
+  <img class="chart" src="assets/09_margin.png" alt="SVM margin and support vectors">
+  <p class="cap">Toy example so the idea is visible — the real dataset comes back in Part 3.</p>
+</section>
+
+<section>
+  <h2>How does it learn?</h2>
+  <div class="cols">
+    <div class="box">
+      <b>Many lines separate these points.</b><br>
+      Which one is best?<br><br>
+      SVM's answer: the one that stays <b>as far away as possible from both groups</b> —
+      the line with the widest empty street (the <b>margin</b>) around it.
+    </div>
+    <div class="good">
+      <b>Why wide is good:</b><br>
+      a line squeezed against the data will misclassify the very next student who arrives.
+      A wide street leaves room for error.
+    </div>
+  </div>
+  <div class="warn">
+    <b>Support vectors</b> = the handful of points touching the edge of the street.
+    <b>They alone define the boundary</b> — delete every other point and you get the identical model.
+    That's where the name comes from.
+  </div>
+</section>
+
+<section>
+  <h2>C — how strict is the model?</h2>
+  <div class="switch" data-group="C">
+    <span class="live">CLICK ME</span><span class="lab">C:</span>
+    <button data-img="assets/10_C_0.01.png" class="on">0.01</button>
+    <button data-img="assets/10_C_1.png">1</button>
+    <button data-img="assets/10_C_100.png">100</button>
+  </div>
+  <img class="chart" id="img-C" src="assets/10_C_0.01.png" alt="effect of C on the SVM margin">
+  <div class="cols">
+    <div class="box"><b>Low C</b> = "I'll tolerate mistakes for a wider street" → simpler, may <b>underfit</b></div>
+    <div class="warn"><b>High C</b> = "Get every point right!" → narrow street, may <b>overfit</b></div>
+  </div>
+</section>
+
+<section>
+  <h2>But what if a straight line can't do it?</h2>
+  <div class="cols">
+    <div class="box">
+      Real data is rarely split by a straight line.<br><br>
+      <b>The kernel trick:</b> SVM imagines the points lifted into a higher dimension
+      where they <em>can</em> be separated by a flat surface — then brings the answer back down,
+      where it looks like a curve.
+    </div>
+    <div class="good">
+      <b>The tabletop analogy 🎾</b><br>
+      Red balls in the middle, blue balls around them. On a flat table no ruler separates them.
+      Now <b>lift the red ones up</b> — a flat sheet of paper slides right between them.
+    </div>
+  </div>
+  <div class="warn">You never have to do this maths. You just type <code>kernel='rbf'</code>.</div>
+</section>
+
+<section>
+  <h2>Kernels in action</h2>
+  <div class="switch" data-group="kernel">
+    <span class="live">CLICK ME</span><span class="lab">kernel:</span>
+    <button data-img="assets/11_kernel_linear.png" class="on">'linear'</button>
+    <button data-img="assets/11_kernel_rbf.png">'rbf'</button>
+    <button data-img="assets/11_kernel_poly.png">'poly'</button>
+  </div>
+  <img class="chart" id="img-kernel" src="assets/11_kernel_linear.png" alt="SVM kernel comparison">
+  <div class="box"><b>rbf</b> is the default and the right first choice 90% of the time.
+  Use <b>linear</b> when you have very many features (e.g. text).</div>
+</section>
+
+<section>
+  <h2>gamma — the reach of one point</h2>
+  <div class="switch" data-group="gamma">
+    <span class="live">CLICK ME</span><span class="lab">gamma:</span>
+    <button data-img="assets/12_gamma_0.1.png" class="on">0.1</button>
+    <button data-img="assets/12_gamma_1.0.png">1</button>
+    <button data-img="assets/12_gamma_30.png">30</button>
+  </div>
+  <img class="chart" id="img-gamma" src="assets/12_gamma_0.1.png" alt="effect of gamma on the RBF boundary">
+  <div class="warn"><b>High gamma</b> → the boundary grows little islands around individual points.
+  Classic overfitting. <b>Low gamma</b> → almost a straight line.</div>
+</section>
+
+<section>
+  <h2>SVM for regression (SVR)</h2>
+  <img class="chart" src="assets/13_svr_tube.png" alt="SVR epsilon tube">
+  <div class="box">
+    Classification asks for the widest street <b>between</b> the classes.<br>
+    Regression flips it: find the <b>flattest tube that contains as many points as possible</b>.
+  </div>
+  <div class="good"><b>epsilon (ε)</b> = how wrong you're allowed to be for free.
+  Predictions inside the tube cost nothing — only the circled points influence the model.</div>
+</section>
+
+<section>
+  <h2>⚠️ The mistake everyone makes once</h2>
+  <img class="chart" src="assets/14_scaling.png" alt="SVM with and without feature scaling">
+  <div class="warn">
+    SVM measures <b>distance</b>. Attendance runs 44→99, CGPA runs 5→10.
+    Without scaling, attendance is ~10× "louder" and CGPA is ignored.
+  </div>
+  <pre><code class="language-python">from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+model = make_pipeline(StandardScaler(), SVC(kernel="rbf"))   # always do this</code></pre>
+  <div class="good">Decision Trees don't care about scaling at all. SVMs care enormously.</div>
+</section>
+
+<section>
+  <h2>SVM — the parameters you'll actually touch</h2>
+  <table>
+    <tr><th>Parameter</th><th>What it does</th><th>Start with</th></tr>
+    <tr><td><code>C</code></td><td>mistake tolerance — <b>the main dial</b></td><td>1, then try 0.1 / 10</td></tr>
+    <tr><td><code>kernel</code></td><td>shape of the boundary</td><td><code>'rbf'</code></td></tr>
+    <tr><td><code>gamma</code></td><td>reach of one point (rbf only)</td><td><code>'scale'</code></td></tr>
+    <tr><td><code>epsilon</code></td><td>width of the free zone (<b>SVR only</b>)</td><td>0.1 – 1</td></tr>
+    <tr><td><code>class_weight</code></td><td><code>'balanced'</code> for imbalanced data</td><td>try it here!</td></tr>
+  </table>
+  <div class="box"><b>C and gamma are a pair</b> — tune them together with <code>GridSearchCV</code>.</div>
+</section>
+
+<section>
+  <h2>SVM — the honest summary</h2>
+  <div class="cols">
+    <div class="good"><b>✅ Strengths</b>
+      <ul style="font-size:.92em">
+        <li>Very strong on small/medium data</li>
+        <li>Handles curved boundaries (kernels)</li>
+        <li>Works when features &gt; samples</li>
+        <li>The wide margin resists overfitting</li>
+      </ul></div>
+    <div class="warn"><b>❌ Weaknesses</b>
+      <ul style="font-size:.92em">
+        <li><b>Slow</b> on big data (&gt;100k rows)</li>
+        <li>A black box — can't explain it</li>
+        <li><b>Must</b> scale features</li>
+        <li>No probabilities by default</li>
+      </ul></div>
+  </div>
+  <div class="box"><b>Used for:</b> text &amp; spam classification, face/image recognition,
+  handwriting, gene expression &amp; medical diagnosis — small, wide, clean datasets.</div>
+</section>
+
+<!-- ============ PART 3 : METRICS ============ -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 3</h1>
+  <h2 style="color:#8fc0ff">How do we know it's any good?</h2>
+</section>
+
+<section>
+  <h2>First rule: never grade on the training data</h2>
+  <div class="cols">
+    <div class="box"><b>Train set (70%)</b><br>the model studies these students</div>
+    <div class="good"><b>Test set (30%)</b><br>the exam — students it has never seen</div>
+  </div>
+  <pre><code class="language-python">X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, random_state=42, stratify=y)</code></pre>
+  <div class="warn">Scoring on data the model already memorised is like giving students the answer key.
+  It's the most common beginner mistake.</div>
+</section>
+
+<section>
+  <h2>⚠️ The accuracy trap</h2>
+  <img class="chart" src="assets/15_accuracy_trap.png" alt="accuracy vs recall for a dumb baseline">
+  <div class="warn">
+    A model that says <b>"Placed"</b> to literally everybody scores <b>86% accuracy</b> on our data —
+    and identifies <b>zero</b> of the students who actually need help.
+  </div>
+  <div class="good">Accuracy alone is meaningless when classes are imbalanced. You need the confusion matrix.</div>
+</section>
+
+<section>
+  <h2>The confusion matrix</h2>
+  <img class="chart" src="assets/16_confusion.png" alt="confusion matrices for the tree and the SVM">
+  <table>
+    <tr><th>Metric</th><th>Plain English</th><th>Use when</th></tr>
+    <tr><td><b>Accuracy</b></td><td>how many did we get right overall?</td><td>classes are balanced</td></tr>
+    <tr><td><b>Precision</b></td><td>when we said "Placed", how often were we right?</td><td>false alarms are costly</td></tr>
+    <tr><td><b>Recall</b></td><td>of all students who got placed, how many did we find?</td><td>misses are costly</td></tr>
+    <tr><td><b>F1</b></td><td>the balance of precision and recall</td><td>imbalanced data — <b>report this</b></td></tr>
+    <tr><td><b>ROC-AUC</b></td><td>ranking quality, 0.5 = coin flip, 1.0 = perfect</td><td>comparing models</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>ROC-AUC in one glance</h2>
+  <img class="chart" src="assets/17_roc.png" alt="ROC curves for both models">
+  <div class="box">Every point on the curve is a different "how sure must I be before I say Placed?" threshold.
+  <b>Bigger area underneath = better model</b>, whatever threshold you finally pick.</div>
+</section>
+
+<section>
+  <h2>Metrics for regression</h2>
+  <img class="chart" src="assets/18_regression_eval.png" alt="actual vs predicted salary for both models">
+  <table>
+    <tr><th>Metric</th><th>Plain English</th><th>Reading it</th></tr>
+    <tr><td><b>MAE</b></td><td>average miss, in LPA</td><td>"we're off by ~1.3 LPA" — easiest to explain</td></tr>
+    <tr><td><b>RMSE</b></td><td>like MAE but punishes big misses</td><td>use when a huge error is very bad</td></tr>
+    <tr><td><b>R²</b></td><td>fraction of the variation explained</td><td>1.0 perfect · 0 = no better than the mean</td></tr>
+  </table>
+  <div class="good">Rule: quote <b>MAE</b> to the business ("±1.3 lakh"), quote <b>R²</b> to the data team.</div>
+</section>
+
+<!-- ============ PART 4 : COMPARISON ============ -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 4</h1>
+  <h2 style="color:#8fc0ff">Tree vs SVM — head to head</h2>
+</section>
+
+<section>
+  <h2>Results on OUR 5,000 students</h2>
+  <img class="chart" src="assets/19_showdown.png" alt="final comparison of both models on both tasks">
+  <div class="cols">
+    <div class="box"><b>Classification</b><br>
+      Tree: acc 0.88 · F1 0.93<br>SVM: acc <b>0.89</b> · F1 <b>0.94</b></div>
+    <div class="box"><b>Regression (salary)</b><br>
+      Tree: R² 0.65 · MAE 1.39<br>SVR: R² <b>0.71</b> · MAE <b>1.26</b></div>
+  </div>
+  <div class="good">SVM wins slightly on both — but the Tree can explain <em>why</em>, and trains in a fraction of the time.
+  <b>"Best" always depends on what you need.</b></div>
+</section>
+
+<section>
+  <h2>Which one should I pick?</h2>
+  <table>
+    <tr><th></th><th>🌳 Decision Tree</th><th>🛣️ SVM</th></tr>
+    <tr><td>Core idea</td><td>a flowchart of yes/no questions</td><td>the widest street between classes</td></tr>
+    <tr><td>Boundary shape</td><td>boxes (straight cuts only)</td><td>straight or smoothly curved</td></tr>
+    <tr><td>Explainable?</td><td><b>Yes — you can draw it</b></td><td>No — black box</td></tr>
+    <tr><td>Needs scaling?</td><td>No</td><td><b>Yes, always</b></td></tr>
+    <tr><td>Big data (&gt;100k)?</td><td>Fast ✅</td><td>Slow ❌</td></tr>
+    <tr><td>Main risk</td><td>overfitting</td><td>wrong C / gamma</td></tr>
+    <tr><td>Main dial</td><td><code>max_depth</code></td><td><code>C</code> (+ <code>gamma</code>)</td></tr>
+  </table>
+  <div class="box"><b>Need to justify the decision to a human → Tree.
+  Small, clean, messy-shaped data → SVM.</b></div>
+</section>
+
+<section>
+  <h2>🧠 Quick check</h2>
+  <div class="quiz" data-answer="1">
+    <p><b>A bank must tell rejected applicants <em>why</em> they were rejected. Which model?</b></p>
+    <button>SVM with an RBF kernel</button>
+    <button>Decision Tree</button>
+    <button>Whichever has higher accuracy</button>
+    <div class="why good">✅ A tree is a readable flowchart — you can hand the applicant the exact rule.
+    In regulated industries explainability often beats a 1% accuracy gain.</div>
+  </div>
+</section>
+
+<section>
+  <h2>🧠 Quick check</h2>
+  <div class="quiz" data-answer="2">
+    <p><b>Your SVM gets 51% accuracy — barely better than a coin flip. Most likely cause?</b></p>
+    <button>You need more data</button>
+    <button>The kernel should be 'poly'</button>
+    <button>You forgot to scale the features</button>
+    <div class="why good">✅ Unscaled features are the #1 cause of a broken SVM.
+    Wrap it in <code>make_pipeline(StandardScaler(), SVC())</code> and try again.</div>
+  </div>
+</section>
+
+<!-- ============ PART 5 : CODE ============ -->
+<section>
+  <h2>The whole thing in 12 lines</h2>
+<pre><code class="language-python">from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.svm import SVC, SVR
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3, random_state=42)
+
+tree = DecisionTreeClassifier(max_depth=5, min_samples_leaf=20).fit(X_train, y_train)
+svm  = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=1)).fit(X_train, y_train)
+
+print(tree.score(X_test, y_test), svm.score(X_test, y_test))</code></pre>
+  <div class="box">Swap <code>Classifier</code>→<code>Regressor</code> and <code>SVC</code>→<code>SVR</code>
+  and the exact same code predicts salary instead.</div>
+</section>
+
+<section>
+  <h2>Cheat sheet</h2>
+  <table>
+    <tr><th>Task</th><th>Code</th></tr>
+    <tr><td>Split the data</td><td><code>train_test_split(X, y, test_size=.3, stratify=y)</code></td></tr>
+    <tr><td>Scale (SVM only)</td><td><code>make_pipeline(StandardScaler(), SVC())</code></td></tr>
+    <tr><td>Draw the tree</td><td><code>plot_tree(model, feature_names=..., filled=True)</code></td></tr>
+    <tr><td>Feature importance</td><td><code>model.feature_importances_</code></td></tr>
+    <tr><td>Classification report</td><td><code>classification_report(y_test, pred)</code></td></tr>
+    <tr><td>Confusion matrix</td><td><code>ConfusionMatrixDisplay.from_estimator(m, X_test, y_test)</code></td></tr>
+    <tr><td>Regression scores</td><td><code>mean_absolute_error</code> · <code>r2_score</code></td></tr>
+    <tr><td>Tune parameters</td><td><code>GridSearchCV(model, {"C":[.1,1,10]}, cv=5)</code></td></tr>
+    <tr><td>Honest estimate</td><td><code>cross_val_score(model, X, y, cv=5)</code></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Remember these five things</h2>
+  <ol style="font-size:.95em">
+    <li>A <b>tree</b> is a flowchart of questions; an <b>SVM</b> is the widest street between classes.</li>
+    <li>Both do <b>classification and regression</b> — just swap the class name.</li>
+    <li><b>Always</b> scale for SVM. <b>Never</b> bother for trees.</li>
+    <li>Judge on the <b>test set</b>, and on imbalanced data report <b>F1</b>, not accuracy.</li>
+    <li>The main dial is <code>max_depth</code> for trees and <code>C</code> for SVM.</li>
+  </ol>
+  <div class="good center big">Start simple. Measure honestly. Then tune.</div>
+</section>
+
+<section class="center" data-background-gradient="linear-gradient(120deg,#0b2545,#1f6feb)">
+  <h1 style="color:#fff">Your turn 👩‍💻</h1>
+  <p style="color:#cfe3ff">Load the dataset · train both models · beat these scores</p>
+  <p style="color:#fff">SVM: F1 <b>0.94</b> (placement) · R² <b>0.71</b> (salary)</p>
+  <p class="small" style="color:#cfe3ff">Charts regenerate with <code>code/make_charts.py</code></p>
+</section>
+
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true, slideNumber: 'c/t', transition: 'slide',
+    plugins: [ RevealHighlight, RevealNotes ]
+  });
+
+  // image switchers
+  document.querySelectorAll('.switch').forEach(function (bar) {
+    var img = document.getElementById('img-' + bar.dataset.group);
+    bar.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        bar.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+        img.src = btn.dataset.img;
+      });
+    });
+  });
+
+  // quizzes
+  document.querySelectorAll('.quiz').forEach(function (q) {
+    var correct = parseInt(q.dataset.answer, 10);
+    q.querySelectorAll('button').forEach(function (btn, i) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        btn.classList.add(i === correct ? 'right' : 'wrong');
+        if (i === correct) q.querySelector('.why').style.display = 'block';
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistics for Data Science — Beginner Slides</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css">
+<style>
+  :root { --accent:#1f6feb; --accent2:#d1495b; }
+  .reveal { font-family: "Segoe UI", system-ui, sans-serif; }
+  .reveal h1,.reveal h2,.reveal h3 { color:#0b2545; text-transform:none; font-weight:700; }
+  .reveal h1 { font-size:2.0em; }
+  .reveal h2 { font-size:1.5em; }
+  .reveal section { text-align:left; font-size:0.80em; }
+  .reveal section.center { text-align:center; }
+  .reveal table { font-size:0.85em; }
+  .reveal th { background:#0b2545; color:#fff; }
+  .reveal td, .reveal th { padding:.28em .6em; }
+  .reveal tr:nth-child(even) td { background:#f3f6fb; }
+  .center { text-align:center; }
+  .box { background:#eef4ff; border-left:6px solid var(--accent); padding:.7em 1em; border-radius:6px; margin:.5em 0; }
+  .warn { background:#fdeff2; border-left:6px solid var(--accent2); padding:.7em 1em; border-radius:6px; margin:.5em 0; }
+  .good { background:#eafaf1; border-left:6px solid #2e9e5b; padding:.7em 1em; border-radius:6px; margin:.5em 0; }
+  .cols { display:flex; gap:1.2em; }
+  .cols > div { flex:1; }
+  .big { font-size:1.6em; color:var(--accent); font-weight:700; }
+  .tag { background:var(--accent); color:#fff; padding:.1em .55em; border-radius:20px; font-size:.7em; }
+  .reveal pre { font-size:0.55em; box-shadow:none; border:1px solid #dde; }
+  .reveal code { border-radius:4px; }
+  .small { font-size:.8em; color:#555; }
+  .reveal img.chart { display:block; margin:.4em auto; width:auto; height:auto;
+                      max-width:100%; max-height:330px;
+                      border:1px solid #e3e8f0; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.08); background:#fff; }
+  .reveal img.chart.tall { max-height:440px; }
+  .credit { text-align:center; font-size:.6em; color:#888; margin-top:.2em; }
+  .credit a { color:#888; }
+  .cap { text-align:center; font-size:.78em; color:#555; margin-top:.2em; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- ================= TITLE ================= -->
+<section class="center" data-background-gradient="linear-gradient(120deg,#0b2545,#1f6feb)">
+  <h1 style="color:#fff">Statistics for Data Science</h1>
+  <h3 style="color:#cfe3ff">A Beginner's Guided Tour</h3>
+  <p style="color:#fff">Mean → Spread → Distributions → Probability → Sampling → Z-Test</p>
+  <p class="small" style="color:#cfe3ff">Dataset: Indian Engineering Student Placement (CGPA, study hours, skills, placement)</p>
+</section>
+
+<section>
+  <h2>Roadmap</h2>
+  <ol>
+    <li>Why statistics? Population vs Sample</li>
+    <li>Central tendency — mean, median, mode</li>
+    <li>Dispersion — variance &amp; standard deviation</li>
+    <li>Distributions &amp; the Normal curve</li>
+    <li>Probability basics</li>
+    <li>Standard Normal &amp; Z-scores</li>
+    <li>Sampling techniques + CLT</li>
+    <li>Hypothesis testing &amp; the Z-test</li>
+  </ol>
+  <div class="box">Every section has a <b>hands-on code cell</b> in <code>code/stats_practicals_slidewise.ipynb</code>.</div>
+</section>
+
+<section>
+  <h2>Our dataset at a glance</h2>
+  <img class="chart tall" src="assets/14_dataset_overview.png" alt="Histograms of the main numeric columns">
+  <p class="cap">5,000 engineering students · red dashed = mean · green = median · look at the skew values</p>
+</section>
+
+<!-- ================= WHY ================= -->
+<section>
+  <h2>Why does a Data Scientist need Statistics?</h2>
+  <table>
+    <tr><th>Business question</th><th>Statistical tool</th></tr>
+    <tr><td>What is a typical student's CGPA?</td><td>Mean / Median / Mode</td></tr>
+    <tr><td>Are students similar or very different?</td><td>Variance / Std Dev</td></tr>
+    <tr><td>What shape does the data have?</td><td>Distributions</td></tr>
+    <tr><td>How rare is a CGPA of 9.5?</td><td>Z-score, Normal curve</td></tr>
+    <tr><td>Can't survey 50,000 students — now what?</td><td>Sampling</td></tr>
+    <tr><td>Did the new training actually work?</td><td>Hypothesis testing</td></tr>
+  </table>
+  <div class="box">Statistics = making <b>confident decisions from incomplete data</b>.</div>
+</section>
+
+<section>
+  <h2>Population vs Sample</h2>
+  <div class="cols">
+    <div>
+      <h3>Population</h3>
+      <p>Every unit you care about.<br><em>All engineering students in India</em></p>
+      <p>Described by <b>parameters</b>: μ, σ, N</p>
+    </div>
+    <div>
+      <h3>Sample</h3>
+      <p>The subset you measured.<br><em>The 5,000 rows in our CSV</em></p>
+      <p>Described by <b>statistics</b>: x̄, s, n</p>
+    </div>
+  </div>
+  <div class="warn">We use the sample to <b>estimate</b> the population. That gap is <em>exactly</em> why hypothesis testing exists.</div>
+</section>
+
+<section>
+  <h2>Population vs Sample — the picture</h2>
+  <img class="chart" src="assets/15_population_vs_sample.png" alt="Population circle with a sample drawn from it">
+  <div class="box">A number describing the population is a <b>parameter</b> (μ, σ).<br>
+  A number describing the sample is a <b>statistic</b> (x̄, s). We use statistics to estimate parameters.</div>
+</section>
+
+<section>
+  <h2>Types of Data</h2>
+  <img class="chart" src="assets/16_data_types.png" alt="Tree diagram of numerical and categorical data types">
+  <div class="warn">Mean of <code>branch</code> = nonsense. Mode of <code>branch</code> = perfect.<br>
+  <b>The data type decides the statistic.</b></div>
+</section>
+
+<!-- ================= CENTRAL TENDENCY ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 1</h1>
+  <h2 style="color:#8fc0ff">Measures of Central Tendency</h2>
+</section>
+
+<section>
+  <h2>One number to describe them all</h2>
+  <div class="cols">
+    <div class="box"><h3>Mean</h3>
+      \[ \bar{x}=\frac{\sum x_i}{n} \]
+      6,7,7,8,9 → <b>7.4</b><br><span class="small">Uses all data · outlier-sensitive</span></div>
+    <div class="box"><h3>Median</h3>
+      Middle of sorted data<br>6,7,<b>7</b>,8,9 → <b>7</b><br><span class="small">Robust to outliers</span></div>
+    <div class="box"><h3>Mode</h3>
+      Most frequent value<br>→ <b>7</b><br><span class="small">Only option for categories</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Symmetric vs Skewed — see it</h2>
+  <img class="chart" src="assets/01_central_tendency.png" alt="Mean median mode on symmetric and skewed data">
+  <div class="good">Left: symmetric → mean = median = mode, pick any.<br>
+  Right: skewed → the mean is dragged toward the tail, the <b>median</b> stays with the crowd.</div>
+</section>
+
+<section>
+  <h2>The Outlier Demo 💥</h2>
+  <table>
+    <tr><th>Monthly salaries</th><th>Mean</th><th>Median</th></tr>
+    <tr><td>30k, 35k, 40k, 45k, 50k</td><td>40k</td><td>40k</td></tr>
+    <tr><td>… + one CEO at 1,00,00k</td><td class="big">17,00k</td><td>42.5k</td></tr>
+  </table>
+  <div class="warn">The mean says "average salary is ₹17 lakh/month" — a <b>lie</b>.<br>The median tells the truth.</div>
+  <div class="good"><b>Rule:</b> symmetric → mean · skewed/outliers → median · categorical → mode</div>
+</section>
+
+<section>
+  <h2>The classic textbook picture</h2>
+  <img class="chart" src="assets/web/wm_mean_median_mode.png" alt="Mean, median and mode on two log-normal distributions">
+  <div class="box">Two skewed distributions. The <b>mode</b> sits at the peak, the <b>median</b> splits the area in half, and the <b>mean</b> is dragged furthest into the tail.</div>
+  <p class="credit">Cmglee, CC BY-SA 3.0, via Wikimedia Commons</p>
+</section>
+
+<!-- ================= DISPERSION ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 2</h1>
+  <h2 style="color:#8fc0ff">Dispersion: Variance &amp; Std Deviation</h2>
+</section>
+
+<section>
+  <h2>Why the mean alone is dangerous</h2>
+  <p>Two classes, <b>both average 7.0 CGPA</b>:</p>
+  <div class="cols">
+    <div class="good"><b>Class A</b><br>7.0, 7.0, 7.0, 7.0, 7.0<br>Spread = 0 → totally consistent</div>
+    <div class="warn"><b>Class B</b><br>4.0, 4.0, 7.0, 10.0, 10.0<br>Huge spread → two very different groups</div>
+  </div>
+  <img class="chart" src="assets/02_spread.png" alt="Two classes with the same mean but different spread">
+</section>
+
+<section>
+  <h2>Variance</h2>
+  <div class="cols">
+    <div>Population<br>\[ \sigma^2=\frac{\sum (x_i-\mu)^2}{N} \]</div>
+    <div>Sample<br>\[ s^2=\frac{\sum (x_i-\bar{x})^2}{n-1} \]</div>
+  </div>
+  <div class="box"><b>Why square?</b> Raw deviations always sum to 0 — positives cancel negatives. Squaring removes signs and punishes big deviations more.</div>
+  <div class="warn"><b>Why n−1? (Bessel's correction)</b> A sample's mean sits too close to its own points → spread is underestimated. Dividing by the smaller n−1 corrects the bias.</div>
+</section>
+
+<section>
+  <h2>Standard Deviation</h2>
+  <p class="center big">\( s = \sqrt{s^2} \)</p>
+  <p>Variance is in <b>squared units</b> (CGPA² — meaningless).<br>
+     The square root brings us back to the original unit.</p>
+  <div class="good"><b>Plain English:</b> "the typical distance of a data point from the mean."</div>
+  <div class="warn">⚠️ Interview trap: <code>pandas .var()</code> uses <b>ddof=1</b>, <code>numpy .var()</code> uses <b>ddof=0</b>. Pass <code>ddof=1</code> to numpy for sample data.</div>
+</section>
+
+<section>
+  <h2>Work it out by hand (once!)</h2>
+  <p>Data: <code>2, 4, 4, 4, 5, 5, 7, 9</code> &nbsp; n = 8</p>
+  <ol>
+    <li>Mean = 40 / 8 = <b>5</b></li>
+    <li>Deviations: −3, −1, −1, −1, 0, 0, 2, 4</li>
+    <li>Squared: 9, 1, 1, 1, 0, 0, 4, 16 → Σ = <b>32</b></li>
+    <li>Population: 32/8 = 4 → <b>σ = 2</b></li>
+    <li>Sample: 32/7 = 4.57 → <b>s = 2.14</b></li>
+  </ol>
+</section>
+
+<section>
+  <h2>IQR &amp; the boxplot outlier rule</h2>
+  <img class="chart" src="assets/03_boxplot_anatomy.png" alt="Anatomy of a boxplot">
+  <ul>
+    <li>IQR = Q3 − Q1 &nbsp;(the middle 50% of data)</li>
+    <li>Outlier if &lt; Q1 − 1.5·IQR &nbsp; or &nbsp; &gt; Q3 + 1.5·IQR</li>
+  </ul>
+  <div class="box">Every boxplot you have ever seen is drawing exactly this — now you can read one.</div>
+</section>
+
+<section>
+  <h2>Boxplot ↔ the bell curve</h2>
+  <img class="chart tall" src="assets/web/wm_boxplot_vs_pdf.png" alt="Boxplot lined up with a normal probability density function">
+  <div class="box">The box holds the middle <b>50%</b> (≈0.67σ each side); the whiskers reach ≈<b>2.7σ</b>, covering 99.3% of a normal population.</div>
+  <p class="credit">Jhguch at en.wikipedia, CC BY-SA 2.5, via Wikimedia Commons</p>
+</section>
+
+<!-- ================= DISTRIBUTIONS ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 3</h1>
+  <h2 style="color:#8fc0ff">Distributions</h2>
+</section>
+
+<section>
+  <h2>Shape vocabulary</h2>
+  <table>
+    <tr><th>Shape</th><th>Tail</th><th>Relationship</th><th>Example</th></tr>
+    <tr><td>Symmetric</td><td>none</td><td>mean ≈ median ≈ mode</td><td>height, CGPA</td></tr>
+    <tr><td>Right skew (+)</td><td>right</td><td>mean &gt; median &gt; mode</td><td>salary, backlogs</td></tr>
+    <tr><td>Left skew (−)</td><td>left</td><td>mean &lt; median &lt; mode</td><td>exam scores (easy test)</td></tr>
+  </table>
+  <img class="chart" src="assets/04_skew.png" alt="Symmetric, right-skewed and left-skewed distributions">
+  <div class="good">Memory trick: <b>the tail pulls the mean.</b></div>
+</section>
+
+<section>
+  <h2>Negative vs positive skew</h2>
+  <img class="chart" src="assets/web/wm_skewness.png" alt="Negative and positive skew diagrams">
+  <div class="box">The name comes from <b>where the tail points</b>, not where the bulk of the data sits — the most common beginner mix-up.</div>
+  <p class="credit">Rodolfo Hermans (Godot) at en.wikipedia, CC BY-SA 3.0, via Wikimedia Commons</p>
+</section>
+
+<section>
+  <h2>Distributions to recognise</h2>
+  <table>
+    <tr><th>Distribution</th><th>Models</th><th>Example</th></tr>
+    <tr><td>Uniform</td><td>all outcomes equally likely</td><td>fair die</td></tr>
+    <tr><td>Bernoulli</td><td>one yes/no trial</td><td>student placed?</td></tr>
+    <tr><td>Binomial</td><td># successes in n trials</td><td>how many of 100 placed</td></tr>
+    <tr><td>Poisson</td><td># events per interval</td><td>tickets per hour</td></tr>
+    <tr><td><b>Normal</b></td><td>natural measurements</td><td>height, CGPA, errors</td></tr>
+  </table>
+  <img class="chart" src="assets/18_distribution_gallery.png" alt="Uniform, Bernoulli, Binomial, Poisson and Normal distributions">
+</section>
+
+<section>
+  <h2>The Normal Distribution</h2>
+  \[ f(x)=\frac{1}{\sigma\sqrt{2\pi}}\,e^{-\frac{(x-\mu)^2}{2\sigma^2}} \]
+  <ul>
+    <li>Bell-shaped &amp; perfectly symmetric about μ</li>
+    <li>Mean = Median = Mode</li>
+    <li>Described by just <b>two numbers</b>: μ and σ</li>
+    <li>Total area under the curve = 1</li>
+  </ul>
+</section>
+
+<section>
+  <h2>μ moves it, σ stretches it</h2>
+  <img class="chart" src="assets/web/wm_normal_pdf.png" alt="Several normal distributions with different means and variances">
+  <div class="box">Change <b>μ</b> → the whole curve <b>slides</b> left/right.<br>
+  Change <b>σ²</b> → the curve gets <b>fatter and flatter</b> (or thinner and taller). The area always stays 1.</div>
+  <p class="credit">Inductiveload, public domain, via Wikimedia Commons</p>
+</section>
+
+<section>
+  <h2>The Empirical Rule: 68 – 95 – 99.7</h2>
+  <img class="chart" src="assets/05_empirical_rule.png" alt="Normal curve with 68-95-99.7 bands shaded">
+  <div class="cols">
+    <div class="box">If CGPA ~ N(7.0, 0.8):<br>
+      68% → 6.2 to 7.8<br>95% → 5.4 to 8.6<br>99.7% → 4.6 to 9.4</div>
+    <div class="good">A student with CGPA <b>9.5</b> is beyond 3σ → top ~0.1%.<br>This is also the <b>3-sigma outlier rule</b>.</div>
+  </div>
+</section>
+
+<section>
+  <h2>The reference version</h2>
+  <img class="chart" src="assets/web/wm_empirical_rule.png" alt="Standard deviation diagram with band percentages">
+  <div class="box">Each band is <b>one σ wide</b>. Read them individually: 34.1% + 34.1% = 68.2% within 1σ,<br>
+  then +13.6% each side → 95.4%, then +2.1% each side → 99.6%.</div>
+  <p class="credit">M. W. Toews, CC BY 2.5, via Wikimedia Commons</p>
+</section>
+
+<!-- ================= PROBABILITY ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 4</h1>
+  <h2 style="color:#8fc0ff">Just Enough Probability</h2>
+</section>
+
+<section>
+  <h2>Probability basics</h2>
+  \[ P(A)=\frac{\text{favourable outcomes}}{\text{total outcomes}},\qquad 0\le P(A)\le 1 \]
+  <table>
+    <tr><th>Rule</th><th>Formula</th></tr>
+    <tr><td>Complement</td><td>\(P(A')=1-P(A)\)</td></tr>
+    <tr><td>Addition</td><td>\(P(A\cup B)=P(A)+P(B)-P(A\cap B)\)</td></tr>
+    <tr><td>Independent</td><td>\(P(A\cap B)=P(A)P(B)\)</td></tr>
+    <tr><td>Conditional</td><td>\(P(A|B)=P(A\cap B)/P(B)\)</td></tr>
+    <tr><td>Bayes</td><td>\(P(A|B)=\dfrac{P(B|A)P(A)}{P(B)}\)</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>The same rules, as pictures</h2>
+  <img class="chart" src="assets/17_probability_venn.png" alt="Venn diagrams for mutually exclusive, overlapping and conditional probability">
+  <div class="box">Conditional probability just <b>shrinks the sample space</b>: once you know B happened, B is the only world left.</div>
+</section>
+
+<section>
+  <h2>Continuous probability = AREA</h2>
+  <ul>
+    <li>\(P(X = \text{exactly }7.000) = 0\) — a single point has zero width</li>
+    <li>\(P(6.5 &lt; X &lt; 7.5)\) = shaded area → meaningful</li>
+  </ul>
+  <table>
+    <tr><th>You want</th><th>Python</th></tr>
+    <tr><td>\(P(Z\le z)\)</td><td><code>norm.cdf(z)</code></td></tr>
+    <tr><td>\(P(Z&gt;z)\)</td><td><code>1 - norm.cdf(z)</code></td></tr>
+    <tr><td>\(P(a&lt;Z&lt;b)\)</td><td><code>norm.cdf(b) - norm.cdf(a)</code></td></tr>
+  </table>
+  <p class="small">Remember: cdf(1.645)≈0.95 · cdf(1.96)≈0.975 · cdf(2.576)≈0.995</p>
+</section>
+
+<!-- ================= Z SCORE ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 5</h1>
+  <h2 style="color:#8fc0ff">Standard Normal &amp; Z-Scores</h2>
+</section>
+
+<section>
+  <h2>Standardization</h2>
+  <p>Standard Normal = Normal with <b>μ = 0, σ = 1</b> &nbsp;→&nbsp; \(Z \sim N(0,1)\)</p>
+  <p class="center big">\( z=\dfrac{x-\mu}{\sigma} \)</p>
+  <div class="box">"How many standard deviations away from the mean is this value?"<br>
+   z = 0 → average · z = +2 → 2 SD above · z = −1.5 → 1.5 SD below</div>
+  <div class="good"><b>Example:</b> CGPA ~ N(7.0, 0.8), a student scores 8.6<br>
+   z = (8.6 − 7.0)/0.8 = <b>2.0</b> → top 2.5% of the class</div>
+</section>
+
+<section>
+  <h2>Three students on one curve</h2>
+  <img class="chart" src="assets/06_zscore.png" alt="Three students plotted on the standard normal curve">
+  <p class="cap">Raw marks differ from exam to exam — the z-score does not. That is what makes it comparable.</p>
+</section>
+
+<section>
+  <h2>Why standardize? 3 reasons</h2>
+  <ol>
+    <li><b>Compare apples to oranges</b> — is a CGPA of 8.5 better than an attendance of 92%? Convert both to z.</li>
+    <li><b>One table for all</b> — a single Z-table works for every normal distribution.</li>
+    <li><b>Machine Learning needs it</b> — KNN, SVM, PCA, gradient descent all break when features are on different scales. <code>StandardScaler</code> is literally this formula.</li>
+  </ol>
+<pre><code class="language-python">from sklearn.preprocessing import StandardScaler
+X_scaled = StandardScaler().fit_transform(X)   # (x - mean) / std</code></pre>
+</section>
+
+<!-- ================= SAMPLING ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 6</h1>
+  <h2 style="color:#8fc0ff">Sampling Techniques</h2>
+</section>
+
+<section>
+  <h2>Probability sampling</h2>
+  <table>
+    <tr><th>Technique</th><th>How</th><th>Use when</th></tr>
+    <tr><td><b>Simple Random</b></td><td>pure lottery</td><td>homogeneous population</td></tr>
+    <tr><td><b>Stratified</b></td><td>split by group (branch), sample each proportionally</td><td>subgroups matter / imbalanced</td></tr>
+    <tr><td><b>Systematic</b></td><td>every k-th record, k = N/n</td><td>ordered lists, assembly lines</td></tr>
+    <tr><td><b>Cluster</b></td><td>randomly pick whole clusters (colleges)</td><td>geographically spread</td></tr>
+  </table>
+  <div class="warn"><b>Non-probability</b> (fast but biased — don't use for inference): convenience, judgement, quota, snowball.</div>
+</section>
+
+<section>
+  <h2>The four techniques, side by side</h2>
+  <img class="chart" src="assets/07_sampling.png" alt="Simple random, stratified, systematic and cluster sampling illustrated on a grid">
+  <p class="cap">Faded = population · outlined = selected · colours = strata / clusters</p>
+  <div class="box">Stratified guarantees every group is represented. Cluster is cheap but risks missing whole groups.</div>
+</section>
+
+<section>
+  <h2>Central Limit Theorem 👑</h2>
+  <div class="good">Take many random samples of size n and plot their <b>means</b>.<br>
+  That distribution is approximately <b>Normal</b> — <b>no matter what shape the original population had</b> (for n ≥ 30).</div>
+  <p class="center">\( \bar{X} \sim N\!\left(\mu,\ \dfrac{\sigma^2}{n}\right) \)</p>
+  <img class="chart" src="assets/08_clt.png" alt="Skewed population turning into a normal sampling distribution as n grows">
+  <div class="box"><b>Why it's huge:</b> income data is horribly skewed, but the <em>average</em> income of samples behaves normally. That is what licenses us to use the Z-test on almost anything.</div>
+</section>
+
+<section>
+  <h2>CLT in one diagram</h2>
+  <img class="chart" src="assets/web/wm_clt.png" alt="Population distribution and the sampling distribution of the mean">
+  <div class="box">The population can be <b>any shape at all</b> (here, two humps). Take samples of size n, average each one, and the distribution of those averages is <b>Gaussian with spread σ/√n</b>.</div>
+  <p class="credit">Mathieu ROUAUD, CC BY-SA 4.0, via Wikimedia Commons</p>
+</section>
+
+<!-- ================= HYPOTHESIS ================= -->
+<section class="center" data-background="#0b2545">
+  <h1 style="color:#fff">Part 7</h1>
+  <h2 style="color:#8fc0ff">Hypothesis Testing &amp; the Z-Test</h2>
+</section>
+
+<section>
+  <h2>The courtroom analogy</h2>
+  <div class="cols">
+    <div class="box"><h3>H₀ — Null</h3>"Nothing is happening."<br>The status quo. <b>Assumed true</b> until evidence says otherwise.<br><em>μ = 7.0</em></div>
+    <div class="box"><h3>H₁ — Alternative</h3>What you want to prove.<br><em>μ ≠ 7.0</em> (two-tailed)<br><em>μ &gt; 7.0</em> (one-tailed)</div>
+  </div>
+  <div class="warn">We never "<s>accept</s>" H₀ — we <b>reject</b> or <b>fail to reject</b> it.<br>
+  "Not guilty" ≠ "innocent".</div>
+</section>
+
+<section>
+  <h2>α, p-value, and the decision</h2>
+  <ul>
+    <li><b>α</b> = false-alarm risk we accept, usually <b>0.05</b></li>
+    <li><b>p-value</b> = probability of data this extreme <em>if H₀ were true</em></li>
+  </ul>
+  <table>
+    <tr><th>If…</th><th>Then…</th></tr>
+    <tr><td>p ≤ α</td><td><b>Reject H₀</b> — statistically significant ✅</td></tr>
+    <tr><td>p &gt; α</td><td><b>Fail to reject H₀</b> — not enough evidence</td></tr>
+  </table>
+  <table>
+    <tr><th>Test</th><th>Critical z (α = 0.05)</th></tr>
+    <tr><td>Two-tailed</td><td>±1.96</td></tr>
+    <tr><td>One-tailed</td><td>±1.645</td></tr>
+    <tr><td>Two-tailed (α = 0.01)</td><td>±2.576</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Where is the rejection region?</h2>
+  <img class="chart" src="assets/10_rejection_regions.png" alt="Two-tailed, right-tailed and left-tailed rejection regions">
+  <div class="box">α is the <b>total red area</b>. Two-tailed splits it 2.5% + 2.5% → the cut-off moves further out (1.96 vs 1.645).</div>
+</section>
+
+<section>
+  <h2>Type I vs Type II errors</h2>
+  <table>
+    <tr><th></th><th>H₀ is TRUE</th><th>H₀ is FALSE</th></tr>
+    <tr><td><b>Reject H₀</b></td><td style="background:#fdeff2">❌ Type I (α)<br>false positive</td><td style="background:#eafaf1">✅ Correct<br>Power = 1−β</td></tr>
+    <tr><td><b>Fail to reject</b></td><td style="background:#eafaf1">✅ Correct</td><td style="background:#fdeff2">❌ Type II (β)<br>false negative</td></tr>
+  </table>
+  <div class="box"><b>Type I</b> = convicting an innocent person.<br><b>Type II</b> = letting a guilty person walk free.</div>
+</section>
+
+<section>
+  <h2>When do I use a Z-test?</h2>
+  <img class="chart" src="assets/20_z_or_t.png" alt="Decision tree: Z-test or t-test">
+  <p class="center big">\( z=\dfrac{\bar{x}-\mu_0}{\sigma/\sqrt{n}} = \dfrac{\text{signal}}{\text{noise}} \)</p>
+  <p class="small">Two-sample: \( z=\dfrac{\bar{x}_1-\bar{x}_2}{\sqrt{\sigma_1^2/n_1+\sigma_2^2/n_2}} \) &nbsp;·&nbsp;
+     Proportion: \( z=\dfrac{\hat p-p_0}{\sqrt{p_0(1-p_0)/n}} \)</p>
+</section>
+
+<section>
+  <h2>The 6-step recipe</h2>
+  <img class="chart" src="assets/19_hypothesis_flow.png" alt="Six step hypothesis testing flowchart">
+  <div class="box">Step 6 is the one beginners skip — a p-value nobody can explain is a wasted analysis.</div>
+</section>
+
+<section>
+  <h2>Worked example 🎯</h2>
+  <p><b>Claim:</b> a printer is advertised at <b>20 pages per minute</b>, σ = 1.5 ppm.<br>
+     A reviewer tests <b>n = 36</b> printers and measures <b>x̄ = 19.4 ppm</b>. Is it slower than advertised?</p>
+  <ol>
+    <li>H₀: μ = 20 · H₁: μ &lt; 20 (left-tailed)</li>
+    <li>α = 0.05 → critical z = −1.645</li>
+    <li>n = 36 ≥ 30, σ known ✔</li>
+    <li>SE = 1.5/√36 = 0.25 → &nbsp; <b>z = (19.4 − 20)/0.25 = −2.4</b></li>
+    <li>p = Φ(−2.4) = <b>0.0082</b></li>
+    <li>0.0082 &lt; 0.05 → <b>Reject H₀</b></li>
+  </ol>
+  <div class="good">Only a <b>0.82%</b> chance of measuring a speed this low if the printer really did 20 ppm → the advertised speed is <b>not</b> supported.</div>
+</section>
+
+<section>
+  <h2>The same example, drawn</h2>
+  <img class="chart" src="assets/11_worked_ztest.png" alt="Z-test with rejection region and p-value shaded">
+  <div class="box">Light red = the 5% we agreed to risk (α). Dark red = the p-value, the actual evidence.<br>
+  <b>p-value smaller than α ⇒ reject H₀.</b></div>
+</section>
+
+<section>
+  <h2>Confidence Interval — the other side of the coin</h2>
+  <p class="center big">\( CI = \bar{x} \pm z_{\alpha/2}\cdot\dfrac{\sigma}{\sqrt{n}} \)</p>
+  <p>Printer example: \(19.4 \pm 1.96 \times 0.25 = [18.91,\ 19.89]\) ppm</p>
+  <div class="good">20 ppm is <b>not inside</b> the interval → reject H₀. Same conclusion, richer information — the real speed is roughly 18.9 to 19.9 ppm.</div>
+  <div class="warn"><b>Correct reading:</b> "If we repeated this study many times, 95% of such intervals would contain the true mean." <br>NOT "there is a 95% chance μ is in this interval."</div>
+</section>
+
+<section>
+  <h2>What "95% confidence" really means</h2>
+  <img class="chart" src="assets/13_confidence_interval.png" alt="40 confidence intervals, a few missing the true mean">
+  <div class="box">40 samples → 40 different intervals. About <b>5% miss the true μ</b> (shown in red).<br>
+  The <em>procedure</em> is 95% reliable — not any single interval.</div>
+</section>
+
+<section>
+  <h2>Statistical ≠ Practical significance</h2>
+  <div class="warn">With n = 1,000,000, a CGPA difference of <b>0.001</b> becomes "highly significant" (p &lt; 0.001).<br>Is it worth changing your entire curriculum for? <b>No.</b></div>
+  <p>Always report an <b>effect size</b> (e.g. Cohen's d) next to the p-value, and ask:<br>
+  <em>"Is this difference big enough to matter in the real world?"</em></p>
+</section>
+
+<!-- ================= WRAP UP ================= -->
+<section>
+  <h2>Cheat sheet</h2>
+  <table>
+    <tr><th>Concept</th><th>Python</th></tr>
+    <tr><td>Mean / Median / Mode</td><td><code>df.c.mean() / .median() / .mode()</code></td></tr>
+    <tr><td>Variance / Std Dev</td><td><code>df.c.var() / df.c.std()</code></td></tr>
+    <tr><td>IQR</td><td><code>df.c.quantile(.75) - df.c.quantile(.25)</code></td></tr>
+    <tr><td>Skewness</td><td><code>df.c.skew()</code></td></tr>
+    <tr><td>Z-score</td><td><code>scipy.stats.zscore(df.c)</code></td></tr>
+    <tr><td>Normal area</td><td><code>scipy.stats.norm.cdf(z)</code></td></tr>
+    <tr><td>Critical value</td><td><code>scipy.stats.norm.ppf(1-alpha/2)</code></td></tr>
+    <tr><td>Random sample</td><td><code>df.sample(n=100, random_state=42)</code></td></tr>
+    <tr><td>Stratified sample</td><td><code>df.groupby('branch').sample(frac=.1)</code></td></tr>
+    <tr><td>Z-test</td><td><code>statsmodels…weightstats.ztest</code></td></tr>
+  </table>
+</section>
+
+<section class="center" data-background-gradient="linear-gradient(120deg,#0b2545,#1f6feb)">
+  <h1 style="color:#fff">Now go code it 👩‍💻</h1>
+  <p style="color:#cfe3ff">Open <code>Statistics/code/stats_practicals_slidewise.ipynb</code></p>
+  <p style="color:#fff">Detailed notes → <code>Statistics/Statistics_Beginner_Notes.md</code></p>
+  <p class="small" style="color:#cfe3ff">Reference diagrams from Wikimedia Commons — credits in <code>assets/web/CREDITS.md</code></p>
+</section>
+
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/math/math.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'slide',
+    plugins: [ RevealHighlight, RevealMath.KaTeX, RevealNotes ]
+  });
+</script>
+</body>
+</html>

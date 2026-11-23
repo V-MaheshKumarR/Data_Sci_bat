@@ -1,0 +1,61 @@
+review_id,product,review_text,sentiment
+1,Smartphone,"I absolutely LOVE this phone!!! The camera is amazing 😍 and battery lasts all day. Best purchase ever!!!",good
+2,Smartphone,"Worst phone I have ever bought... screen cracked in 2 days :( totally disappointed.",bad
+3,Smartphone,"The phone is okay, nothing special. Works as expected for the price.",neutral
+4,Headphones,"Sound quality is superb!! Bass is deep & crystal clear 🎧 highly recommended.",good
+5,Headphones,"These headphones broke after 1 week of use. Very poor build quality!!",bad
+6,Headphones,"Decent headphones. Not the best but not bad either.",neutral
+7,Laptop,"Super fast laptop, boots up in seconds!! Perfect for work & gaming 💻",good
+8,Laptop,"Laptop heats up like crazy and fan is soooo loud. Waste of money.",bad
+9,Laptop,"Average laptop. Does the job but nothing extraordinary.",neutral
+10,Shoes,"Best running shoes ever!!! So comfy and stylish 👟 love love love!",good
+11,Shoes,"Shoes started tearing after 10 days. Terrible quality :(",bad
+12,Shoes,"Shoes are fine. Fits well. Color is slightly different from the picture.",neutral
+13,Watch,"Gorgeous watch!! Looks premium and works perfectly. 5 stars ⭐⭐⭐⭐⭐",good
+14,Watch,"Don't buy this watch!!! Battery died in 3 days. Complete junk.",bad
+15,Watch,"It's an okay watch. Does what a watch should do.",neutral
+16,Camera,"Amazing camera 📷 pictures come out so crisp and colorful. Worth every penny!",good
+17,Camera,"Camera stopped working after a month. Customer service is horrible!",bad
+18,Camera,"Camera is decent for beginners. Not for professional use though.",neutral
+19,Backpack,"Super spacious & sturdy backpack! Perfect for college 🎒 highly recommend!",good
+20,Backpack,"Zipper broke on day 2... what a waste of 2000 rupees.",bad
+21,Backpack,"The backpack is alright. Good enough for daily use.",neutral
+22,Blender,"This blender is a BEAST!! Crushes ice like butter. Love it!!",good
+23,Blender,"Blender motor burned out in 1 week. Very disappointed :(",bad
+24,Blender,"Works okay for smoothies. Nothing to complain about.",neutral
+25,TV,"Picture quality is stunning!!! 4K is mind blowing 📺 best TV ever.",good
+26,TV,"TV screen has dead pixels everywhere. Return initiated!!",bad
+27,TV,"TV is fine. Sound could be better but picture is decent.",neutral
+28,Charger,"Fast charging works great 🔌 very happy with purchase.",good
+29,Charger,"Charger stopped working in 5 days. Garbage product!!",bad
+30,Charger,"Charger works. Nothing special to mention.",neutral
+31,Bottle,"Keeps water cold for 24 HOURS!! Amazing bottle!!! 💧",good
+32,Bottle,"Bottle leaks everywhere. Don't waste your money.",bad
+33,Bottle,"Bottle is ok. Does the job of holding water.",neutral
+34,Mouse,"Smooth & responsive mouse 🖱️ perfect for gaming! Loving it.",good
+35,Mouse,"Mouse clicks not registering half the time. Very bad!",bad
+36,Mouse,"Mouse is average. Works fine for basic office use.",neutral
+37,Keyboard,"RGB keyboard is gorgeous 🌈 keys feel premium and clicky!",good
+38,Keyboard,"Keys started sticking after 2 weeks. Poor quality.",bad
+39,Keyboard,"Keyboard is decent. Not mechanical but works well.",neutral
+40,Perfume,"Fragrance is heavenly!!! Lasts all day 💕 will buy again!",good
+41,Perfume,"Smells like cheap alcohol. Totally fake product!!",bad
+42,Perfume,"Scent is okay. Doesn't last very long but it's alright.",neutral
+43,Book,"Best book I've read this year!!! Couldn't put it down 📚",good
+44,Book,"Boring book. Waste of time and money. Don't recommend.",bad
+45,Book,"Book was okay. Some parts were interesting, some were not.",neutral
+46,Tshirt,"Love the fit & fabric!!! So soft and comfy 👕 ordering more!",good
+47,Tshirt,"Tshirt shrunk after first wash. Awful quality!!!",bad
+48,Tshirt,"Tshirt is fine. Material is average for the price.",neutral
+49,Speaker,"Bluetooth speaker is LOUD 🔊 and bass is insane! Perfect for parties!",good
+50,Speaker,"Speaker sounds muffled and battery is weak. Very bad experience.",bad
+51,Speaker,"Speaker is decent. Works as expected.",neutral
+52,Powerbank,"Powerbank charges my phone 3x!! Super compact & fast 🔋",good
+53,Powerbank,"Powerbank doesn't hold charge at all. Useless!!",bad
+54,Powerbank,"Powerbank works. Charging speed is average.",neutral
+55,Fan,"This fan is AMAZING!!! Super silent and powerful airflow 💨",good
+56,Fan,"Fan makes weird noise from day 1. Bad product!",bad
+57,Fan,"Fan is okay. Does the cooling job.",neutral
+58,Kettle,"Boils water in 2 mins!!! Love this kettle ☕ highly recommended!",good
+59,Kettle,"Kettle stopped working in 3 weeks. Terrible!!",bad
+60,Kettle,"Kettle works fine. Nothing fancy but does its job.",neutral

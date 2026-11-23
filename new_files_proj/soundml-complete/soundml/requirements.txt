@@ -1,0 +1,33 @@
+# SoundML — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Web Framework ──────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+python-multipart
+
+# ── ML & Data Science ─────────────────────────────────────────────────────
+scikit-learn
+numpy
+pandas
+joblib
+scipy
+imbalanced-learn
+
+# ── Data Validation ───────────────────────────────────────────────────────
+pydantic
+pydantic-settings
+
+# ── Utilities ─────────────────────────────────────────────────────────────
+python-dotenv
+httpx
+rich           # Beautiful terminal output
+
+# ── Visualization (optional, for EDA notebooks) ───────────────────────────
+matplotlib
+seaborn
+
+# ── Testing ───────────────────────────────────────────────────────────────
+pytest
+pytest-asyncio
+httpx         # Test client for FastAPI
